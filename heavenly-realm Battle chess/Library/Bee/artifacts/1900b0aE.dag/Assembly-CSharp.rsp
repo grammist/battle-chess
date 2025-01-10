@@ -363,6 +363,8 @@
 -analyzer:"D:/Unity 2023.1.4f1c1/Editor/Data/Tools/Unity.SourceGenerators/Unity.Properties.SourceGenerator.dll"
 -analyzer:"D:/Unity 2023.1.4f1c1/Editor/Data/Tools/Unity.SourceGenerators/Unity.SourceGenerators.dll"
 "Assets/CameraMoving.cs"
+"Assets/CheckMouse.cs"
+"Assets/general moving.cs"
 -langversion:9.0
 
 /deterministic
