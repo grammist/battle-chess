@@ -365,6 +365,7 @@
 "Assets/CameraMoving.cs"
 "Assets/CheckMouse.cs"
 "Assets/general moving.cs"
+"Assets/Manager.cs"
 -langversion:9.0
 
 /deterministic

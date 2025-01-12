@@ -18,7 +18,7 @@ public class HoverChangeColor : MonoBehaviour
 
     // Delegate and Event
     public delegate void ObjectUnClicked(GameObject unclickedObject);
-    public static event ObjectUnClicked OnObjectUnClicked;
+    //public static event ObjectUnClicked OnObjectUnClicked;
 
 
     void Start()
@@ -45,7 +45,7 @@ public class HoverChangeColor : MonoBehaviour
                 isHovered = true;
 
                 // Set bool true and change color on left-click
-                if (Input.GetMouseButtonDown(0)) // Left-click
+                if (Input.GetMouseButtonDown(0) && ((hit.transform.gameObject.CompareTag("White") && GameManager.currentTurn == GameManager.TurnState.white) || (hit.transform.gameObject.CompareTag("Black") && GameManager.currentTurn == GameManager.TurnState.black))) // Left-click
                 {
                     isClicked = true;
                     Selected = hit.transform.name;
@@ -78,6 +78,10 @@ public class HoverChangeColor : MonoBehaviour
         {
             objectRenderer.material.color = originalColor;
         }
+    }
+    public void unClick(){
+        isClicked = false;
+        objectRenderer.material.color = originalColor;
     }
 
     public bool getColor(){return isWhite;}
