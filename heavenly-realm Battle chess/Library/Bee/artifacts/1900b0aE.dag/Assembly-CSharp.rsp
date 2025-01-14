@@ -366,6 +366,7 @@
 "Assets/CheckMouse.cs"
 "Assets/general moving.cs"
 "Assets/Manager.cs"
+"Assets/Timeout Penalty.cs"
 -langversion:9.0
 
 /deterministic

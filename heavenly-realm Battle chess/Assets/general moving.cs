@@ -18,6 +18,13 @@ public class generalmoving : MonoBehaviour
 
     private Dictionary<GameObject, Color> originalColors = new Dictionary<GameObject, Color>();
 
+    [SerializeField] public AudioClip seM;
+    private AudioSource player;
+
+    void Start(){
+        player = Camera.main.GetComponent<AudioSource>();
+    }
+
 
     // Update is called once per frame
     void Update()
@@ -122,6 +129,7 @@ public class generalmoving : MonoBehaviour
 
     private void OnMoveCompleted()
     {
+        player.PlayOneShot(seM);
         if (lastTargetParent != null && lastTargetParent.childCount == 2)
         {
             Transform child = lastTargetParent.GetChild(0);

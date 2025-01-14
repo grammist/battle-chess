@@ -20,12 +20,15 @@ public class HoverChangeColor : MonoBehaviour
     public delegate void ObjectUnClicked(GameObject unclickedObject);
     //public static event ObjectUnClicked OnObjectUnClicked;
 
+    [SerializeField] public AudioClip seC;
+    private AudioSource player;
 
     void Start()
     {
         // Get the Renderer component and save the original color
         objectRenderer = GetComponent<Renderer>();
         originalColor = objectRenderer.material.color;
+        player = Camera.main.GetComponent<AudioSource>();
     }
 
     void Update()
@@ -45,8 +48,9 @@ public class HoverChangeColor : MonoBehaviour
                 isHovered = true;
 
                 // Set bool true and change color on left-click
-                if (Input.GetMouseButtonDown(0) && ((hit.transform.gameObject.CompareTag("White") && GameManager.currentTurn == GameManager.TurnState.white) || (hit.transform.gameObject.CompareTag("Black") && GameManager.currentTurn == GameManager.TurnState.black))) // Left-click
+                if (Input.GetMouseButtonDown(0) && checkTurnValid(hit.transform)) // Left-click
                 {
+                    player.PlayOneShot(seC);
                     isClicked = true;
                     Selected = hit.transform.name;
                     // Trigger the event and send this GameObject
@@ -85,4 +89,9 @@ public class HoverChangeColor : MonoBehaviour
     }
 
     public bool getColor(){return isWhite;}
+
+    public bool checkTurnValid(Transform t){
+        return t.gameObject.CompareTag("White") && (GameManager.currentTurn == GameManager.TurnState.white) ||
+        t.gameObject.CompareTag("Black") && (GameManager.currentTurn == GameManager.TurnState.black);
+    }
 }

@@ -3,7 +3,11 @@ guid: 6e03f55d543c51646a37435b8301f6b8
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - chess: {instanceID: 0}
+  - targetSquare: {instanceID: 0}
+  - curObject: {instanceID: 0}
+  - seM: {fileID: 8300000, guid: 03590bdf45cc4ae45ae99056b58e7e2e, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

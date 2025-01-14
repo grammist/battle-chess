@@ -6,38 +6,23 @@ public class GameManager : MonoBehaviour
     public enum TurnState { white, black }
     public static TurnState currentTurn;
 
+
     void Start()
     {
-        StartCoroutine(GameLoop());
+
     }
 
-    private IEnumerator GameLoop()
-    {
-        while (true)
-        {
-            if (currentTurn == TurnState.white)
-            {
-                Debug.Log("white");
-                yield return StartCoroutine(whiteTurn());
-            }
-            else if (currentTurn == TurnState.black)
-            {
-                Debug.Log("black");
-                yield return StartCoroutine(blackTurn());
-            }
-        }
-    }
 
-    private IEnumerator whiteTurn()
+    /*private IEnumerator whiteTurn()
     {
         // Perform white turn logic here
         Debug.Log("White turn in progress...");
-        
-        // Example delay to simulate work being done
-        yield return new WaitForSeconds(30f);
+
+        // Example delay to simulate work being done (e.g., waiting for player input)
+        yield return new WaitForSeconds(2f);  // Simulate some work done
 
         // Set the next turn
-        currentTurn = TurnState.black;
+        NextState();  // Calling NextState resets the timer
     }
 
     private IEnumerator blackTurn()
@@ -45,16 +30,20 @@ public class GameManager : MonoBehaviour
         // Perform black turn logic here
         Debug.Log("Black turn in progress...");
 
-        // Example delay to simulate work being done
-        yield return new WaitForSeconds(30f);
+        // Example delay to simulate work being done (e.g., waiting for player input)
+        yield return new WaitForSeconds(2f);  // Simulate some work done
 
         // Set the next turn
-        currentTurn = TurnState.white;
-    }
+        NextState();  // Calling NextState resets the timer
+    }*/
 
     public static void NextState()
     {
-        // Advance to the next state
-        currentTurn = (TurnState)(((int)currentTurn + 1) % System.Enum.GetValues(typeof(TurnState)).Length);
+        TimeoutPenalty.timeElapsed = 0f;
+        if(currentTurn == TurnState.white) {
+            currentTurn = TurnState.black;
+        } else {
+            currentTurn = TurnState.white;
+        }
     }
 }
