@@ -7,7 +7,7 @@ MonoImporter:
   - chess: {instanceID: 0}
   - targetSquare: {instanceID: 0}
   - curObject: {instanceID: 0}
-  - seM: {fileID: 8300000, guid: 03590bdf45cc4ae45ae99056b58e7e2e, type: 3}
+  - seM: {fileID: 8300000, guid: 9e6c3fcb2322d6d44b430a37f5a193f8, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

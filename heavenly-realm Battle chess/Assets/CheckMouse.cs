@@ -83,6 +83,7 @@ public class HoverChangeColor : MonoBehaviour
             objectRenderer.material.color = originalColor;
         }
     }
+
     public void unClick(){
         isClicked = false;
         objectRenderer.material.color = originalColor;
@@ -94,4 +95,5 @@ public class HoverChangeColor : MonoBehaviour
         return t.gameObject.CompareTag("White") && (GameManager.currentTurn == GameManager.TurnState.white) ||
         t.gameObject.CompareTag("Black") && (GameManager.currentTurn == GameManager.TurnState.black);
     }
+
 }

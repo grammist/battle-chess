@@ -13,30 +13,6 @@ public class GameManager : MonoBehaviour
     }
 
 
-    /*private IEnumerator whiteTurn()
-    {
-        // Perform white turn logic here
-        Debug.Log("White turn in progress...");
-
-        // Example delay to simulate work being done (e.g., waiting for player input)
-        yield return new WaitForSeconds(2f);  // Simulate some work done
-
-        // Set the next turn
-        NextState();  // Calling NextState resets the timer
-    }
-
-    private IEnumerator blackTurn()
-    {
-        // Perform black turn logic here
-        Debug.Log("Black turn in progress...");
-
-        // Example delay to simulate work being done (e.g., waiting for player input)
-        yield return new WaitForSeconds(2f);  // Simulate some work done
-
-        // Set the next turn
-        NextState();  // Calling NextState resets the timer
-    }*/
-
     public static void NextState()
     {
         TimeoutPenalty.timeElapsed = 0f;
@@ -45,5 +21,6 @@ public class GameManager : MonoBehaviour
         } else {
             currentTurn = TurnState.white;
         }
+        Debug.Log(currentTurn);
     }
 }

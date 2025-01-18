@@ -11,6 +11,11 @@ scopes = {
 	"last_search.8DF93126" = "inspector"
 	"OpenInspectorPreview.8DF93126" = "0"
 	"currentGroup.8DF93126" = null
+	"picker_window_position_offset.0B486DF2" = "119.2001;184.8;320;550.4"
+	"picker_search_text.0B486DF2" = ""
+	"last_search.0B486DF2" = ""
+	"OpenInspectorPreview.0B486DF2" = "0"
+	"currentGroup.0B486DF2" = null
 }
 providers = {
 	log = {

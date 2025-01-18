@@ -79,17 +79,28 @@ public class generalmoving : MonoBehaviour
     {
         HoverChangeColor.OnObjectClicked += HandleObjectClicked;
         //HoverChangeColor.OnObjectUnClicked += HandleObjectUnClicked;
+        TimeoutPenalty.OnTimeOut += HandleTimeOut;
     }
 
     private void OnDisable()
     {
         HoverChangeColor.OnObjectClicked -= HandleObjectClicked;
         //HoverChangeColor.OnObjectUnClicked -= HandleObjectUnClicked;
+        TimeoutPenalty.OnTimeOut -= HandleTimeOut;
     }
 
     private void HandleObjectClicked(GameObject clickedObject)
     {
         curObject = clickedObject;
+    }
+    private void HandleTimeOut()
+    {
+        if(curObject != null) {
+            curObject.GetComponent<HoverChangeColor>().unClick();
+        }
+        curObject = null;
+        ResetGridHighlight();
+        curGrid = null;
     }
 
     private void HandleObjectUnClicked(GameObject clickedObject)
@@ -105,10 +116,13 @@ public class generalmoving : MonoBehaviour
             return;
         }
 
-        chessObject.transform.SetParent(null);
+        // Get the original Y position of the chess object
+        float originalY = chessObject.transform.position.y;
 
-        Vector3 targetPosition = targetSquareObject.transform.position + new Vector3(0, 1.25f, 0);
+        // Set the target position to the target square's position, maintaining the object's original Y position
+        Vector3 targetPosition = new Vector3(targetSquareObject.transform.position.x, originalY, targetSquareObject.transform.position.z);
 
+        // Start the movement coroutine to move the object only on the X and Z axes
         StartCoroutine(MoveToTarget(chessObject, targetSquareObject.transform, targetPosition, moveSpeed, OnMoveCompleted));
     }
 
@@ -136,7 +150,9 @@ public class generalmoving : MonoBehaviour
             Destroy(child.gameObject);
         }
         GameManager.NextState();
-        curObject.GetComponent<HoverChangeColor>().unClick();
+        if(curObject != null) {
+            curObject.GetComponent<HoverChangeColor>().unClick();
+        }
         curObject = null;
     }
 
