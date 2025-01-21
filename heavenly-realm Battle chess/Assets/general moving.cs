@@ -36,7 +36,7 @@ public class generalmoving : MonoBehaviour
         {
             Transform hitTransform = hit.transform;
 
-            if (hitTransform != null && hitTransform.parent == this.transform)
+            if (hitTransform != null /*&& hitTransform.parent == this.transform*/)
             {
                 if (Input.GetMouseButtonDown(0) && allowClick && curObject != null && hitTransform.childCount < 2)
                 {
@@ -50,15 +50,46 @@ public class generalmoving : MonoBehaviour
                         // Confirm the move
                         if (hitTransform.childCount == 0)
                         {
-                            allowClick = false;
+                            Debug.Log("Child count = 0");
+                           // allowClick = false;
                             lastTargetParent = hitTransform; // Store the parent for later use
-                            Move(curObject, hitTransform.gameObject);
+                           // Move(curObject, hitTransform.gameObject);
+                            if (IsValidMove(curObject, hitTransform.gameObject))
+                            {
+
+                                allowClick = false;
+
+                                Move(curObject, hitTransform.gameObject);
+                            } else
+                            {
+                                // Invalid move: let the player try again
+                                Debug.Log("Invalid move!");
+                                allowClick = true;            // Re-enable clicks
+                                ResetGridHighlight();        // Remove any highlight
+                                curGrid = null;              // Clear the selection
+                                //ResetGridHighlight();        // Remove any highlight
+                            }
                         }
                         else if (hitTransform.GetChild(0).tag != curObject.tag)
                         {
+                            Debug.Log("Tag doesn't equal to current object");
                             allowClick = false;
                             lastTargetParent = hitTransform; // Store the parent for later use
-                            Move(curObject, hitTransform.gameObject);
+                            //Move(curObject, hitTransform.gameObject);
+                            if (IsValidMove(curObject, hitTransform.gameObject))
+                            {
+                                allowClick = false;
+
+                                Move(curObject, hitTransform.gameObject);
+                            } else
+                            {
+                                // Invalid move: let the player try again
+                                Debug.Log("Invalid move!");
+                                allowClick = true;            // Re-enable clicks
+                                ResetGridHighlight();        // Remove any highlight
+                                curGrid = null;              // Clear the selection
+                                //ResetGridHighlight();        // Remove any highlight
+                            }
                         }
 
                         ResetGridHighlight(); // Reset grid highlight after confirmation
@@ -72,6 +103,58 @@ public class generalmoving : MonoBehaviour
                 }
             }
         }
+    }
+
+    private bool IsValidMove(GameObject chessObject, GameObject targetSquare)
+    {
+        Debug.Log("IsValidMove");
+        Debug.Log($"Clicked object is {curObject.name}");
+        //PawnMovement pawnMovement = chessObject.GetComponent<PawnMovement>();
+        PawnMovement pawnMovement = chessObject.GetComponentInChildren<PawnMovement>();
+        Debug.Log($"Pawnmovement: {pawnMovement}");
+        if (pawnMovement != null)
+        {
+            Debug.Log("Pawn movement");
+            return pawnMovement.IsValidMove(targetSquare);
+        }
+
+        // Add other piece movement validations here
+        KnightMovement knightMovement = chessObject.GetComponent<KnightMovement>();
+        if (knightMovement != null)
+        {
+            Debug.Log("Knight movement");
+            return knightMovement.IsValidMove(targetSquare);
+        }
+
+        RookMovement rookMovement = chessObject.GetComponent<RookMovement>();
+        if (rookMovement != null)
+        {
+            Debug.Log("Rook movement");
+            return rookMovement.IsValidMove(targetSquare); 
+        }
+
+        BishopMovement bishopMovement = chessObject.GetComponent <BishopMovement>();
+        if (bishopMovement != null)
+        {
+            Debug.Log("Bishop movement");
+            return bishopMovement.IsValidMove(targetSquare);
+        }
+
+        KingMovement kingMovement = chessObject.GetComponent<KingMovement>();
+        if (kingMovement != null)
+        {
+            Debug.Log("King Movement");
+            return kingMovement.IsValidMove(targetSquare);
+        }
+
+        QueenMovement queenMovement = chessObject.GetComponent<QueenMovement>();
+        if (queenMovement != null)
+        {
+            Debug.Log("Queen movement");
+            return queenMovement.IsValidMove(targetSquare);
+        }
+
+        return true;
     }
 
 
@@ -186,6 +269,8 @@ void ResetGridHighlight()
         curGrid = null; // Clear the current grid
     }
 }
+
+
 
 
 }
