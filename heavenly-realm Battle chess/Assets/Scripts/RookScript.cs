@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class RookMovement : MonoBehaviour
 {
+
+    public bool hasMoved = false;
     // This method checks if the target square is a valid move for the rook.
     public bool IsValidMove(GameObject targetSquare)
     {

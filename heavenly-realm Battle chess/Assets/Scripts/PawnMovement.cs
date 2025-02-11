@@ -39,6 +39,7 @@ public class PawnMovement : MonoBehaviour
 
     public bool IsValidMove(GameObject targetSquare)
     {
+        Debug.Log("IsValidMove function");
         //int direction = (this.tag == "White") ? -1 : 1;
         //int direction = (this.tag == "White") ? -1 : 1;
         int direction = 0;
@@ -52,7 +53,7 @@ public class PawnMovement : MonoBehaviour
             // Black moves “up” (increasing z)
             direction = 1;
         }
-        Debug.Log($"Direction: , { direction}");
+        Debug.Log($"Direction: , {direction}");
 
         // Convert positions to board coordinates
         Vector2Int currentCoords = GetBoardCoordinates(this.transform.parent.position);
@@ -106,7 +107,7 @@ public class PawnMovement : MonoBehaviour
         // Check for diagonal capture
         if (Mathf.Abs(xDiff) == 1 && zDiff == direction)
         {
-            if (targetSquare.transform.childCount > 0 && targetSquare.transform.GetChild(0).tag != this.tag)
+            if (targetSquare.transform.GetChild(0).tag != this.tag)
                 return true;
         }
 

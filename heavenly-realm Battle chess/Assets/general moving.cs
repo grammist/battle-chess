@@ -6,7 +6,6 @@ using UnityEngine;
 public class generalmoving : MonoBehaviour
 {
     private float moveSpeed = 10.0f;
-
     private bool allowClick = true;
 
     public GameObject chess;
@@ -15,16 +14,27 @@ public class generalmoving : MonoBehaviour
     public static GameObject curGrid;
 
     private Transform lastTargetParent;
-
     private Dictionary<GameObject, Color> originalColors = new Dictionary<GameObject, Color>();
 
     [SerializeField] public AudioClip seM;
     private AudioSource player;
 
-    void Start(){
+    // Multiple piece prefabs for promotion; assign these in Inspector
+    [SerializeField] private GameObject whiteQueenPrefab;
+    [SerializeField] private GameObject blackQueenPrefab;
+    [SerializeField] private GameObject whiteRookPrefab;
+    [SerializeField] private GameObject blackRookPrefab;
+    [SerializeField] private GameObject whiteBishopPrefab;
+    [SerializeField] private GameObject blackBishopPrefab;
+    [SerializeField] private GameObject whiteKnightPrefab;
+    [SerializeField] private GameObject blackKnightPrefab;
+
+    [SerializeField] private Transform boardTransform;
+
+    void Start()
+    {
         player = Camera.main.GetComponent<AudioSource>();
     }
-
 
     // Update is called once per frame
     void Update()
@@ -36,69 +46,63 @@ public class generalmoving : MonoBehaviour
         {
             Transform hitTransform = hit.transform;
 
-            if (hitTransform != null /*&& hitTransform.parent == this.transform*/)
+            if (hitTransform != null)
             {
                 if (Input.GetMouseButtonDown(0) && allowClick && curObject != null && hitTransform.childCount < 2)
                 {
-                    if (curGrid == null) // First click
+                    if (curGrid == null)
                     {
+                        // First click
                         curGrid = hitTransform.gameObject;
-                        HighlightGrid(curGrid, Color.blue); // Turn the grid blue
+                        HighlightGrid(curGrid, Color.blue);
                     }
-                    else if (curGrid == hitTransform.gameObject) // Second click to confirm
+                    else if (curGrid == hitTransform.gameObject)
                     {
-                        // Confirm the move
+                        // Second click to confirm
                         if (hitTransform.childCount == 0)
                         {
                             Debug.Log("Child count = 0");
-                           // allowClick = false;
-                            lastTargetParent = hitTransform; // Store the parent for later use
-                           // Move(curObject, hitTransform.gameObject);
+                            lastTargetParent = hitTransform;
                             if (IsValidMove(curObject, hitTransform.gameObject))
                             {
-
                                 allowClick = false;
-
                                 Move(curObject, hitTransform.gameObject);
-                            } else
+                            }
+                            else
                             {
-                                // Invalid move: let the player try again
                                 Debug.Log("Invalid move!");
-                                allowClick = true;            // Re-enable clicks
-                                ResetGridHighlight();        // Remove any highlight
-                                curGrid = null;              // Clear the selection
-                                //ResetGridHighlight();        // Remove any highlight
+                                allowClick = true;
+                                ResetGridHighlight();
+                                curGrid = null;
                             }
                         }
                         else if (hitTransform.GetChild(0).tag != curObject.tag)
                         {
-                            Debug.Log("Tag doesn't equal to current object");
+                            // Attempt a capture
+                            Debug.Log("Attempting capture");
                             allowClick = false;
-                            lastTargetParent = hitTransform; // Store the parent for later use
-                            //Move(curObject, hitTransform.gameObject);
+                            lastTargetParent = hitTransform;
                             if (IsValidMove(curObject, hitTransform.gameObject))
                             {
                                 allowClick = false;
-
                                 Move(curObject, hitTransform.gameObject);
-                            } else
+                            }
+                            else
                             {
-                                // Invalid move: let the player try again
-                                Debug.Log("Invalid move!");
-                                allowClick = true;            // Re-enable clicks
-                                ResetGridHighlight();        // Remove any highlight
-                                curGrid = null;              // Clear the selection
-                                //ResetGridHighlight();        // Remove any highlight
+                                Debug.Log("Invalid capture attempt!");
+                                allowClick = true;
+                                ResetGridHighlight();
+                                curGrid = null;
                             }
                         }
 
-                        ResetGridHighlight(); // Reset grid highlight after confirmation
+                        ResetGridHighlight();
                     }
-                    else // Clicking a different grid cancels the selection
+                    else // a different grid => cancel selection
                     {
                         ResetGridHighlight();
                         curGrid = hitTransform.gameObject;
-                        HighlightGrid(curGrid, Color.blue); // Highlight the new grid
+                        HighlightGrid(curGrid, Color.blue);
                     }
                 }
             }
@@ -109,16 +113,16 @@ public class generalmoving : MonoBehaviour
     {
         Debug.Log("IsValidMove");
         Debug.Log($"Clicked object is {curObject.name}");
-        //PawnMovement pawnMovement = chessObject.GetComponent<PawnMovement>();
+
+        // Pawn
         PawnMovement pawnMovement = chessObject.GetComponentInChildren<PawnMovement>();
-        Debug.Log($"Pawnmovement: {pawnMovement}");
         if (pawnMovement != null)
         {
             Debug.Log("Pawn movement");
             return pawnMovement.IsValidMove(targetSquare);
         }
 
-        // Add other piece movement validations here
+        // Knight
         KnightMovement knightMovement = chessObject.GetComponent<KnightMovement>();
         if (knightMovement != null)
         {
@@ -126,20 +130,23 @@ public class generalmoving : MonoBehaviour
             return knightMovement.IsValidMove(targetSquare);
         }
 
+        // Rook
         RookMovement rookMovement = chessObject.GetComponent<RookMovement>();
         if (rookMovement != null)
         {
             Debug.Log("Rook movement");
-            return rookMovement.IsValidMove(targetSquare); 
+            return rookMovement.IsValidMove(targetSquare);
         }
 
-        BishopMovement bishopMovement = chessObject.GetComponent <BishopMovement>();
+        // Bishop
+        BishopMovement bishopMovement = chessObject.GetComponent<BishopMovement>();
         if (bishopMovement != null)
         {
             Debug.Log("Bishop movement");
             return bishopMovement.IsValidMove(targetSquare);
         }
 
+        // King
         KingMovement kingMovement = chessObject.GetComponent<KingMovement>();
         if (kingMovement != null)
         {
@@ -147,6 +154,7 @@ public class generalmoving : MonoBehaviour
             return kingMovement.IsValidMove(targetSquare);
         }
 
+        // Queen
         QueenMovement queenMovement = chessObject.GetComponent<QueenMovement>();
         if (queenMovement != null)
         {
@@ -157,18 +165,15 @@ public class generalmoving : MonoBehaviour
         return true;
     }
 
-
     private void OnEnable()
     {
         HoverChangeColor.OnObjectClicked += HandleObjectClicked;
-        //HoverChangeColor.OnObjectUnClicked += HandleObjectUnClicked;
         TimeoutPenalty.OnTimeOut += HandleTimeOut;
     }
 
     private void OnDisable()
     {
         HoverChangeColor.OnObjectClicked -= HandleObjectClicked;
-        //HoverChangeColor.OnObjectUnClicked -= HandleObjectUnClicked;
         TimeoutPenalty.OnTimeOut -= HandleTimeOut;
     }
 
@@ -176,19 +181,16 @@ public class generalmoving : MonoBehaviour
     {
         curObject = clickedObject;
     }
+
     private void HandleTimeOut()
     {
-        if(curObject != null) {
+        if (curObject != null)
+        {
             curObject.GetComponent<HoverChangeColor>().unClick();
         }
         curObject = null;
         ResetGridHighlight();
         curGrid = null;
-    }
-
-    private void HandleObjectUnClicked(GameObject clickedObject)
-    {
-        curObject = null;
     }
 
     void Move(GameObject chessObject, GameObject targetSquareObject)
@@ -199,13 +201,13 @@ public class generalmoving : MonoBehaviour
             return;
         }
 
-        // Get the original Y position of the chess object
         float originalY = chessObject.transform.position.y;
+        Vector3 targetPosition = new Vector3(
+            targetSquareObject.transform.position.x,
+            originalY,
+            targetSquareObject.transform.position.z
+        );
 
-        // Set the target position to the target square's position, maintaining the object's original Y position
-        Vector3 targetPosition = new Vector3(targetSquareObject.transform.position.x, originalY, targetSquareObject.transform.position.z);
-
-        // Start the movement coroutine to move the object only on the X and Z axes
         StartCoroutine(MoveToTarget(chessObject, targetSquareObject.transform, targetPosition, moveSpeed, OnMoveCompleted));
     }
 
@@ -213,12 +215,17 @@ public class generalmoving : MonoBehaviour
     {
         while (Vector3.Distance(chessObject.transform.position, targetPosition) > 0.01f)
         {
-            chessObject.transform.position = Vector3.MoveTowards(chessObject.transform.position, targetPosition, moveSpeed * Time.deltaTime);
+            chessObject.transform.position = Vector3.MoveTowards(
+                chessObject.transform.position,
+                targetPosition,
+                moveSpeed * Time.deltaTime
+            );
             yield return null;
         }
 
         chessObject.transform.SetParent(targetParent);
 
+        // Re-enable clicking after the move
         allowClick = true;
 
         onMoveComplete?.Invoke();
@@ -226,51 +233,147 @@ public class generalmoving : MonoBehaviour
 
     private void OnMoveCompleted()
     {
-        player.PlayOneShot(seM);
+        // If capturing (square had a piece), remove the occupant
         if (lastTargetParent != null && lastTargetParent.childCount == 2)
         {
             Transform child = lastTargetParent.GetChild(0);
             Destroy(child.gameObject);
         }
+
+        // If we had an SFX, play it
+        player.PlayOneShot(seM);
+
+        // (Optional) Next turn logic
         GameManager.NextState();
-        if(curObject != null) {
+
+        // Un-click visuals
+        if (curObject != null)
+        {
             curObject.GetComponent<HoverChangeColor>().unClick();
+            // Check if it's a pawn that needs promotion
+            PawnMovement pm = curObject.GetComponentInChildren<PawnMovement>();
+            if (pm != null)
+            {
+                Debug.Log("Check for promotion");
+                CheckForPromotion(curObject);
+            }
         }
-        curObject = null;
+
+        curObject = null; // Clear current piece reference
     }
 
-void HighlightGrid(GameObject grid, Color color)
-{
-    Renderer renderer = grid.GetComponent<Renderer>();
-    if (renderer != null)
+    /// <summary>
+    /// Checks if the pawn reached a promotion rank, then calls PromotionUI for user choice.
+    /// Adjust the rank logic for your board orientation.
+    /// </summary>
+    private void CheckForPromotion(GameObject pawnObject)
     {
-        // Store the original color if it's not already stored
-        if (!originalColors.ContainsKey(grid))
+        Vector2Int finalCoords = GetBoardCoordinates(pawnObject.transform.position);
+        bool isWhite = pawnObject.CompareTag("White");
+
+        // Example: White final rank = y == -6, Black final rank = y == 1
+        if ((isWhite && finalCoords.y == -6) ||
+            (!isWhite && finalCoords.y == 1))
         {
-            originalColors[grid] = renderer.material.color;
+            // Instead of auto-promoting, show the UI
+            Debug.Log("Pawn on promotion rank. Requesting Promotion UI...");
+            PromotionUI.Instance.ShowPromotionPanel(pawnObject);
         }
-
-        // Change the color of the grid
-        renderer.material.color = color;
     }
-}
 
-void ResetGridHighlight()
-{
-    if (curGrid != null)
+    /// <summary>
+    /// Called by PromotionUI. Actually replaces the pawn with the chosen piece type.
+    /// </summary>
+    public void PerformPromotion(GameObject pawnObject, string pieceType)
     {
-        Renderer renderer = curGrid.GetComponent<Renderer>();
-        if (renderer != null && originalColors.ContainsKey(curGrid))
+        Debug.Log($"Promoting pawn to {pieceType}!");
+
+        Transform parentSquare = pawnObject.transform.parent;
+        bool isWhite = pawnObject.CompareTag("White");
+
+        // 1. Destroy old pawn
+        Destroy(pawnObject);
+
+        // 2. Choose correct prefab
+        GameObject newPiecePrefab = GetPromotionPrefab(isWhite, pieceType);
+        if (newPiecePrefab == null)
         {
-            // Reset to the original color
-            renderer.material.color = originalColors[curGrid];
+            Debug.LogError($"No prefab found for {pieceType}");
+            return;
         }
 
-        curGrid = null; // Clear the current grid
+        // 3. Instantiate new piece
+        GameObject newPiece = Instantiate(newPiecePrefab, parentSquare.position, Quaternion.identity);
+
+        // 4. Parent to same square
+        newPiece.transform.SetParent(parentSquare);
+
+        // 5. Optionally fix scale & position
+        newPiece.transform.localScale = newPiecePrefab.transform.localScale;
+        float yOffset = 0.5f;
+        Vector3 finalPos = new Vector3(
+            parentSquare.position.x,
+            parentSquare.position.y + yOffset,
+            parentSquare.position.z
+        );
+        newPiece.transform.position = finalPos;
+
+        Debug.Log($"Pawn promoted to {pieceType}!");
     }
-}
 
+    /// <summary>
+    /// Returns the correct prefab for the chosen piece type (Queen/Rook/Bishop/Knight).
+    /// </summary>
+    private GameObject GetPromotionPrefab(bool isWhite, string pieceType)
+    {
+        switch (pieceType)
+        {
+            case "Rook":
+                return isWhite ? whiteRookPrefab : blackRookPrefab;
+            case "Bishop":
+                return isWhite ? whiteBishopPrefab : blackBishopPrefab;
+            case "Knight":
+                return isWhite ? whiteKnightPrefab : blackKnightPrefab;
+            default:
+                // "Queen"
+                return isWhite ? whiteQueenPrefab : blackQueenPrefab;
+        }
+    }
 
+    private Vector2Int GetBoardCoordinates(Vector3 worldPosition)
+    {
+        float squareSize = 2.0f;
+        Vector3 boardOrigin = boardTransform.position;
 
+        int x = Mathf.RoundToInt((worldPosition.x - boardOrigin.x) / squareSize);
+        int z = Mathf.RoundToInt((worldPosition.z - boardOrigin.z) / squareSize);
 
+        return new Vector2Int(x, z);
+    }
+
+    void HighlightGrid(GameObject grid, Color color)
+    {
+        Renderer renderer = grid.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            if (!originalColors.ContainsKey(grid))
+            {
+                originalColors[grid] = renderer.material.color;
+            }
+            renderer.material.color = color;
+        }
+    }
+
+    void ResetGridHighlight()
+    {
+        if (curGrid != null)
+        {
+            Renderer renderer = curGrid.GetComponent<Renderer>();
+            if (renderer != null && originalColors.ContainsKey(curGrid))
+            {
+                renderer.material.color = originalColors[curGrid];
+            }
+            curGrid = null;
+        }
+    }
 }
