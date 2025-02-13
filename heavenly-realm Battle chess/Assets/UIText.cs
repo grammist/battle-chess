@@ -14,7 +14,7 @@ public class UIText : MonoBehaviour
 
     void Update()
     {
-        myVariable = (float)Math.Round((30f - TimeoutPenalty.timeElapsed), 2);
+        myVariable = (float)Math.Round((300f - TimeoutPenalty.timeElapsed), 2);
         // Update the text to show the variable value
         if (textUI != null)
         {

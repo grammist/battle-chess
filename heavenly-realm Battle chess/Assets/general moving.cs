@@ -21,57 +21,151 @@ public class generalmoving : MonoBehaviour
     [SerializeField] public AudioClip seM;
     private AudioSource player;
 
+    private Vector3 savedPosition;
+    private Quaternion savedRotation;
+    private bool save = false;
+
+    public GameObject capturedPiece;
+    public GameObject uiPanel;
+    private bool battle = false;
+
+    private GameObject retrieve; 
+    private GameObject inBattlePiece;
+
+
     void Start(){
         player = Camera.main.GetComponent<AudioSource>();
+        //uiPanel = GameObject.Find("Panel");
     }
 
 
     // Update is called once per frame
     void Update()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
+        if(!battle) {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit))
-        {
-            Transform hitTransform = hit.transform;
-
-            if (hitTransform != null && hitTransform.parent == this.transform)
+            if (Physics.Raycast(ray, out hit))
             {
-                if (Input.GetMouseButtonDown(0) && allowClick && curObject != null && hitTransform.childCount < 2)
-                {
-                    if (curGrid == null) // First click
-                    {
-                        curGrid = hitTransform.gameObject;
-                        HighlightGrid(curGrid, Color.blue); // Turn the grid blue
-                    }
-                    else if (curGrid == hitTransform.gameObject) // Second click to confirm
-                    {
-                        // Confirm the move
-                        if (hitTransform.childCount == 0)
-                        {
-                            allowClick = false;
-                            lastTargetParent = hitTransform; // Store the parent for later use
-                            Move(curObject, hitTransform.gameObject);
-                        }
-                        else if (hitTransform.GetChild(0).tag != curObject.tag)
-                        {
-                            allowClick = false;
-                            lastTargetParent = hitTransform; // Store the parent for later use
-                            Move(curObject, hitTransform.gameObject);
-                        }
+                Transform hitTransform = hit.transform;
 
-                        ResetGridHighlight(); // Reset grid highlight after confirmation
-                    }
-                    else // Clicking a different grid cancels the selection
+                if (hitTransform != null /*&& hitTransform.parent == this.transform*/)
+                {
+                    if (Input.GetMouseButtonDown(0) && allowClick && curObject != null && hitTransform.childCount < 2)
                     {
-                        ResetGridHighlight();
-                        curGrid = hitTransform.gameObject;
-                        HighlightGrid(curGrid, Color.blue); // Highlight the new grid
+                        if (curGrid == null) // First click
+                        {
+                            curGrid = hitTransform.gameObject;
+                            HighlightGrid(curGrid, Color.blue); // Turn the grid blue
+                        }
+                        else if (curGrid == hitTransform.gameObject) // Second click to confirm
+                        {
+                            // Confirm the move
+                            if (hitTransform.childCount == 0)
+                            {
+                            // allowClick = false;
+                                lastTargetParent = hitTransform; // Store the parent for later use
+                            // Move(curObject, hitTransform.gameObject);
+                                if (IsValidMove(curObject, hitTransform.gameObject))
+                                {
+
+                                    allowClick = false;
+
+                                    Move(curObject, hitTransform.gameObject);
+                                } else
+                                {
+                                    // Invalid move: let the player try again
+                                    Debug.Log("Invalid move!");
+                                    allowClick = true;            // Re-enable clicks
+                                    ResetGridHighlight();        // Remove any highlight
+                                    curGrid = null;              // Clear the selection
+                                    //ResetGridHighlight();        // Remove any highlight
+                                }
+                            }
+                            else if (hitTransform.GetChild(0).tag != curObject.tag)
+                            {
+                                allowClick = false;
+                                lastTargetParent = hitTransform; // Store the parent for later use
+                                //Move(curObject, hitTransform.gameObject);
+                                if (IsValidMove(curObject, hitTransform.gameObject))
+                                {
+                                    allowClick = false;
+                                    inBattlePiece = curObject;
+                                    retrieve = inBattlePiece.transform.parent.gameObject;
+                                    Move(curObject, hitTransform.gameObject);
+                                } else
+                                {
+                                    // Invalid move: let the player try again
+                                    allowClick = true;            // Re-enable clicks
+                                    ResetGridHighlight();        // Remove any highlight
+                                    curGrid = null;              // Clear the selection
+                                    //ResetGridHighlight();        // Remove any highlight
+                                }
+                            }
+
+                            ResetGridHighlight(); // Reset grid highlight after confirmation
+                        }
+                        else // Clicking a different grid cancels the selection
+                        {
+                            ResetGridHighlight();
+                            curGrid = hitTransform.gameObject;
+                            HighlightGrid(curGrid, Color.blue); // Highlight the new grid
+                        }
                     }
                 }
             }
         }
+        
+    }
+
+    public static bool IsValidMove(GameObject chessObject, GameObject targetSquare)
+    {
+        //PawnMovement pawnMovement = chessObject.GetComponent<PawnMovement>();
+        PawnMovement pawnMovement = chessObject.GetComponentInChildren<PawnMovement>();
+        if (pawnMovement != null)
+        {
+            //Debug.Log("Pawn movement");
+            return pawnMovement.IsValidMove(targetSquare);
+        }
+
+        // Add other piece movement validations here
+        KnightMovement knightMovement = chessObject.GetComponent<KnightMovement>();
+        if (knightMovement != null)
+        {
+            //Debug.Log("Knight movement");
+            return knightMovement.IsValidMove(targetSquare);
+        }
+
+        RookMovement rookMovement = chessObject.GetComponent<RookMovement>();
+        if (rookMovement != null)
+        {
+            //Debug.Log("Rook movement");
+            return rookMovement.IsValidMove(targetSquare); 
+        }
+
+        BishopMovement bishopMovement = chessObject.GetComponent <BishopMovement>();
+        if (bishopMovement != null)
+        {
+            //Debug.Log("Bishop movement");
+            return bishopMovement.IsValidMove(targetSquare);
+        }
+
+        KingMovement kingMovement = chessObject.GetComponent<KingMovement>();
+        if (kingMovement != null)
+        {
+            //Debug.Log("King Movement");
+            return kingMovement.IsValidMove(targetSquare);
+        }
+
+        QueenMovement queenMovement = chessObject.GetComponent<QueenMovement>();
+        if (queenMovement != null)
+        {
+            //Debug.Log("Queen movement");
+            return queenMovement.IsValidMove(targetSquare);
+        }
+
+        return true;
     }
 
 
@@ -146,8 +240,13 @@ public class generalmoving : MonoBehaviour
         player.PlayOneShot(seM);
         if (lastTargetParent != null && lastTargetParent.childCount == 2)
         {
+            battle = true;
             Transform child = lastTargetParent.GetChild(0);
-            Destroy(child.gameObject);
+            capturedPiece = child.gameObject;
+            Transform cameraTransform = Camera.main.transform;
+            SaveCameraTransform(cameraTransform);
+            StartCoroutine(SmoothTransition(OnCameraTransitionCompleted, curObject.transform.position + new Vector3(0, 0.1f, 2), Quaternion.Euler(-30, 180, 0), 100));
+            
         }
         GameManager.NextState();
         if(curObject != null) {
@@ -157,35 +256,116 @@ public class generalmoving : MonoBehaviour
     }
 
 void HighlightGrid(GameObject grid, Color color)
-{
-    Renderer renderer = grid.GetComponent<Renderer>();
-    if (renderer != null)
     {
-        // Store the original color if it's not already stored
-        if (!originalColors.ContainsKey(grid))
+        Renderer renderer = grid.GetComponent<Renderer>();
+        if (renderer != null)
         {
-            originalColors[grid] = renderer.material.color;
-        }
+            // Store the original color if it's not already stored
+            if (!originalColors.ContainsKey(grid))
+            {
+                originalColors[grid] = renderer.material.color;
+            }
 
-        // Change the color of the grid
-        renderer.material.color = color;
+            // Change the color of the grid
+            renderer.material.color = color;
+        }
     }
-}
 
 void ResetGridHighlight()
-{
-    if (curGrid != null)
     {
-        Renderer renderer = curGrid.GetComponent<Renderer>();
-        if (renderer != null && originalColors.ContainsKey(curGrid))
+        if (curGrid != null)
         {
-            // Reset to the original color
-            renderer.material.color = originalColors[curGrid];
+            Renderer renderer = curGrid.GetComponent<Renderer>();
+            if (renderer != null && originalColors.ContainsKey(curGrid))
+            {
+                // Reset to the original color
+                renderer.material.color = originalColors[curGrid];
+            }
+
+            curGrid = null; // Clear the current grid
+        }
+    }
+
+public void SaveCameraTransform(Transform cameraTransform)
+    {
+        save = true;
+        savedPosition = cameraTransform.position;
+        savedRotation = cameraTransform.rotation;
+    }
+
+    public void RestoreCameraTransform()
+    {
+        save = false;
+    }
+
+    private IEnumerator SmoothTransition(Action callback, Vector3 targetPosition, Quaternion targetRotation, float fov)
+    {
+        float transitionTime = 1.5f;
+        // Store the initial values of the camera
+        Vector3 initialPosition = Camera.main.transform.position;
+        Quaternion initialRotation = Camera.main.transform.rotation;
+        float initialFOV = Camera.main.fieldOfView;
+
+        // Timer to keep track of the transition progress
+        float timeElapsed = 0f;
+
+        // Smoothly transition over time
+        while (timeElapsed < transitionTime)
+        {
+            timeElapsed += Time.deltaTime;
+
+            // Interpolate the position, rotation, and FOV of the camera
+            Camera.main.transform.position = Vector3.Lerp(initialPosition, targetPosition, timeElapsed / transitionTime);
+            Camera.main.transform.rotation = Quaternion.Lerp(initialRotation, targetRotation, timeElapsed / transitionTime);
+            Camera.main.fieldOfView = Mathf.Lerp(initialFOV, fov, timeElapsed / transitionTime);
+            yield return null; // Wait for the next frame
         }
 
-        curGrid = null; // Clear the current grid
+        // Ensure the final values are set (in case transition time is over)
+        Camera.main.transform.position = targetPosition;
+        Camera.main.transform.rotation = targetRotation;
+
+        // Invoke the callback function after the camera transition is complete
+        callback?.Invoke();
     }
-}
+
+    private void OnCameraTransitionCompleted()
+    {
+        uiPanel.SetActive(true);       
+        
+    }
+
+    private void OnCameraTransitionCompleted0()
+    {
+        
+    }
+
+    public void OnClick(){
+        
+        uiPanel.SetActive(false); 
+        battle = false;
+        Destroy(capturedPiece);
+        StartCoroutine(SmoothTransition(OnCameraTransitionCompleted0, savedPosition, savedRotation, 60));
+    }
+
+    public void OnClick0(){
+        
+        uiPanel.SetActive(false); 
+        battle = false;
+        //Debug.Log(curObject.name);
+        Destroy(inBattlePiece);
+        inBattlePiece = null;
+        StartCoroutine(SmoothTransition(OnCameraTransitionCompleted0, savedPosition, savedRotation, 60));
+    }
+
+    public void OnClick1(){
+        
+        uiPanel.SetActive(false); 
+        battle = false;
+        Move(inBattlePiece, retrieve);
+        GameManager.NextState();
+        StartCoroutine(SmoothTransition(OnCameraTransitionCompleted0, savedPosition, savedRotation, 60));
+    }
 
 
 }

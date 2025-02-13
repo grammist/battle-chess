@@ -18,7 +18,7 @@ public class TimeoutPenalty : MonoBehaviour
     void Update()
     {
         timeElapsed += Time.deltaTime;
-        if(timeElapsed >= 30f) {
+        if(timeElapsed >= 300f) {
             OnTimeOut?.Invoke();
             GameManager.NextState();
         }

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 747244495262936645}
   - component: {fileID: 4174395712220803539}
   - component: {fileID: 1408825272215649658}
+  - component: {fileID: 2834970458825906662}
   m_Layer: 0
   m_Name: Dark Grid
   m_TagString: Untagged
@@ -105,3 +106,17 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &2834970458825906662
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8095780797208546013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48e42a076e671054b8cb934fb5f14be3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  curObject: {fileID: 0}
+  highlightColor: {r: 0, g: 1, b: 1, a: 1}

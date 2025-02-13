@@ -7467,7 +7467,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 14246591292845015}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e03f55d543c51646a37435b8301f6b8, type: 3}
   m_Name: 
@@ -7476,6 +7476,8 @@ MonoBehaviour:
   targetSquare: {fileID: 0}
   curObject: {fileID: 0}
   seM: {fileID: 8300000, guid: 03590bdf45cc4ae45ae99056b58e7e2e, type: 3}
+  capturedPiece: {fileID: 0}
+  uiPanel: {fileID: 0}
 --- !u!23 &5389993056692996041
 MeshRenderer:
   m_ObjectHideFlags: 0

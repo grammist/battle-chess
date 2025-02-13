@@ -21,6 +21,6 @@ public class GameManager : MonoBehaviour
         } else {
             currentTurn = TurnState.white;
         }
-        Debug.Log(currentTurn);
+        //Debug.Log(currentTurn);
     }
 }
