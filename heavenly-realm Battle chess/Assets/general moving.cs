@@ -201,6 +201,9 @@ public class generalmoving : MonoBehaviour
             return;
         }
 
+        // Ensure targetSquareObject is stored properly before moving
+        this.targetSquare = targetSquareObject;
+
         float originalY = chessObject.transform.position.y;
         Vector3 targetPosition = new Vector3(
             targetSquareObject.transform.position.x,
@@ -231,7 +234,65 @@ public class generalmoving : MonoBehaviour
         onMoveComplete?.Invoke();
     }
 
+
     private void OnMoveCompleted()
+    {
+        // Check for En Passant capture
+        PawnMovement movingPawn = curObject?.GetComponent<PawnMovement>();
+        if (movingPawn != null)
+        {
+            Vector2Int moveCoords = GetBoardCoordinates(curObject.transform.position);
+            int direction = movingPawn.CompareTag("White") ? -1 : 1;
+            Vector2Int capturedCoords = new Vector2Int(moveCoords.x, moveCoords.y - direction);
+
+            GameObject capturedSquare = GetSquareAtCoordinates(capturedCoords);
+            if (capturedSquare == null)
+            {
+                Debug.LogError($"En Passant failed: No square found at {capturedCoords}");
+                return;
+            }
+
+            if (capturedSquare.transform.childCount > 0)
+            {
+                GameObject capturedPawn = capturedSquare.transform.GetChild(0).gameObject;
+                PawnMovement capturedPawnScript = capturedPawn.GetComponent<PawnMovement>();
+
+                if (capturedPawnScript != null && capturedPawnScript.enPassantVulnerable)
+                {
+                    Debug.Log("En Passant capture: Removing captured pawn!");
+                    Destroy(capturedPawn);
+                }
+            }
+        }
+
+        // If capturing (square had a piece), remove the occupant (for normal captures)
+        if (lastTargetParent != null && lastTargetParent.childCount == 2)
+        {
+            Transform child = lastTargetParent.GetChild(0);
+            Destroy(child.gameObject);
+        }
+
+        // Play move sound
+        player.PlayOneShot(seM);
+
+        // Switch turn
+        GameManager.NextState();
+
+        // Un-click visuals
+        if (curObject != null)
+        {
+            curObject.GetComponent<HoverChangeColor>().unClick();
+            PawnMovement pm = curObject.GetComponentInChildren<PawnMovement>();
+            if (pm != null)
+            {
+                CheckForPromotion(curObject);
+            }
+        }
+
+        curObject = null; // Clear current piece reference
+    }
+
+    /*private void OnMoveCompleted()
     {
         // If capturing (square had a piece), remove the occupant
         if (lastTargetParent != null && lastTargetParent.childCount == 2)
@@ -239,6 +300,49 @@ public class generalmoving : MonoBehaviour
             Transform child = lastTargetParent.GetChild(0);
             Destroy(child.gameObject);
         }
+
+        // Prevents the error
+        if (curObject == null)
+        {
+            Debug.LogError("curObject is null in OnMoveCompleted.");
+            return;
+        }
+
+        if (this.targetSquare == null)
+        {
+            Debug.LogError("Error: targetSquareObject is null in OnMoveCompleted.");
+            return;
+        }
+
+
+        // If en passant happened, remove the captured pawn
+        PawnMovement movingPawn = curObject?.GetComponent<PawnMovement>();
+
+        if (movingPawn != null)
+        {
+            Vector2Int capturedCoords = new Vector2Int(
+                GetBoardCoordinates(this.targetSquare.transform.position).x,
+                GetBoardCoordinates(this.targetSquare.transform.position).y - (movingPawn.CompareTag("White") ? 1 : -1)
+            );
+
+            GameObject capturedSquare = GetSquareAtCoordinates(capturedCoords);
+            if (capturedSquare != null && capturedSquare.transform.childCount > 0)
+            {
+                GameObject capturedPawn = capturedSquare.transform.GetChild(0).gameObject;
+                Destroy(capturedPawn);
+                Debug.Log("En Passant captured pawn removed!");
+            }
+        }
+
+        // Standard capture
+        if (lastTargetParent != null && lastTargetParent.childCount == 2)
+        {
+            Transform child = lastTargetParent.GetChild(0);
+            Destroy(child.gameObject);
+        }
+
+
+
 
         // If we had an SFX, play it
         player.PlayOneShot(seM);
@@ -260,7 +364,23 @@ public class generalmoving : MonoBehaviour
         }
 
         curObject = null; // Clear current piece reference
+    }*/
+
+    private GameObject GetSquareAtCoordinates(Vector2Int coords)
+    {
+        foreach (Transform child in boardTransform) // Ensure 'boardTransform' is assigned
+        {
+            Vector2Int squareCoords = GetBoardCoordinates(child.position);
+            if (squareCoords == coords)
+            {
+                Debug.Log($"Square found at {coords}: {child.name}");
+                return child.gameObject;
+            }
+        }
+        Debug.LogError($"No square found at {coords}!");
+        return null;
     }
+
 
     /// <summary>
     /// Checks if the pawn reached a promotion rank, then calls PromotionUI for user choice.

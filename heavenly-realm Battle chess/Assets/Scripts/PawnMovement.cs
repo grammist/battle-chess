@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class PawnMovement : MonoBehaviour
 {
+    public bool enPassantVulnerable = false;
 
     private Vector2Int GetBoardCoordinates(Vector3 worldPosition)
     {
@@ -93,6 +94,8 @@ public class PawnMovement : MonoBehaviour
                     if (midSquare.transform.childCount == 0)
                     {
                         Debug.Log("Two-square move is valid!");
+                        enPassantVulnerable = true;  // Enable En Passant capture
+                        Debug.Log($"En passent is vulnerable");
                         return true;
                     }
                 }
@@ -107,12 +110,43 @@ public class PawnMovement : MonoBehaviour
         // Check for diagonal capture
         if (Mathf.Abs(xDiff) == 1 && zDiff == direction)
         {
-            if (targetSquare.transform.GetChild(0).tag != this.tag)
-                return true;
+            if (targetSquare.transform.childCount > 0) // Check if there is a piece to capture
+            {
+                if (targetSquare.transform.GetChild(0).tag != this.tag)
+                {
+                    return true; // Normal capture
+                }
+            }
+            else
+            {
+                // Check for En Passant capture
+                return CheckEnPassantCapture(currentCoords, targetCoords, direction);
+            }
         }
 
         return false;
     }
+
+    private bool CheckEnPassantCapture(Vector2Int currentCoords, Vector2Int targetCoords, int direction)
+    {
+        // The "passed" pawn is behind the target square by 1 in z
+        Vector2Int behindCoords = new Vector2Int(targetCoords.x, targetCoords.y - direction);
+
+        GameObject behindSquare = GetSquareAtCoordinates(behindCoords);
+        if (behindSquare != null && behindSquare.transform.childCount > 0)
+        {
+            GameObject behindPawn = behindSquare.transform.GetChild(0).gameObject;
+            PawnMovement behindPawnMovement = behindPawn.GetComponent<PawnMovement>();
+
+            if (behindPawnMovement != null && behindPawnMovement.enPassantVulnerable)
+            {
+                Debug.Log("En Passant capture is valid.");
+                return true;
+            }
+        }
+        return false;
+    }
+
 
 
 
