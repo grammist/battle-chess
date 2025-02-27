@@ -100,64 +100,7 @@ public class GridHighlight : MonoBehaviour
         }
     }
 
-    /*private void InitializeWhitePieces()
-    {
-        whitePieces.Add(GameObject.Find("Pawn1"));
-        whitePieces.Add(GameObject.Find("Pawn2"));
-        whitePieces.Add(GameObject.Find("Pawn3"));
-        whitePieces.Add(GameObject.Find("Pawn4"));
-        whitePieces.Add(GameObject.Find("Pawn5"));
-        whitePieces.Add(GameObject.Find("Pawn6"));
-        whitePieces.Add(GameObject.Find("Pawn7"));
-        whitePieces.Add(GameObject.Find("Pawn8"));
-
-        whitePieces.Add(GameObject.Find("Rook"));
-        whitePieces.Add(GameObject.Find("Rook1"));
-
-        whitePieces.Add(GameObject.Find("Knight"));
-        whitePieces.Add(GameObject.Find("Knight1"));
-
-        whitePieces.Add(GameObject.Find("Bishop"));
-        whitePieces.Add(GameObject.Find("Bishop1"));
-
-        whitePieces.Add(GameObject.Find("Queen"));
-        whitePieces.Add(GameObject.Find("King"));
-    }
-
-    private void InitializeBlackPieces()
-    {
-        blackPieces.Add(GameObject.Find("Pawn01"));
-        blackPieces.Add(GameObject.Find("Pawn02"));
-        blackPieces.Add(GameObject.Find("Pawn03"));
-        blackPieces.Add(GameObject.Find("Pawn04"));
-        blackPieces.Add(GameObject.Find("Pawn05"));
-        blackPieces.Add(GameObject.Find("Pawn06"));
-        blackPieces.Add(GameObject.Find("Pawn07"));
-        blackPieces.Add(GameObject.Find("Pawn08"));
-
-        blackPieces.Add(GameObject.Find("Rook0"));
-        blackPieces.Add(GameObject.Find("Rook01"));
-
-        blackPieces.Add(GameObject.Find("Knight0"));
-        blackPieces.Add(GameObject.Find("Knight01"));
-
-        blackPieces.Add(GameObject.Find("Bishop0"));
-        blackPieces.Add(GameObject.Find("Bishop01"));
-
-        blackPieces.Add(GameObject.Find("Queen0"));
-        blackPieces.Add(GameObject.Find("King0"));
-    }
-
-    public void whiteControlZone(){
-        foreach (GameObject i in whitePieces)
-        {
-            if(generalmoving.IsValidMove(i,this.gameObject)) {
-                objectRenderer.material.color = whiteColor;
-            }else{
-                colorChange();
-            }
-        }
-    }*/
+    
 
     public void colorChange(){
         objectRenderer.material.color = curColor;

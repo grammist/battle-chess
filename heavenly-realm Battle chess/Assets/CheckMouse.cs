@@ -4,6 +4,8 @@ public class HoverChangeColor : MonoBehaviour
 {
     private Renderer objectRenderer;
     private Color originalColor;
+    private Renderer cubeobjectRenderer;
+    private Color cubeoriginalColor;
     public Color hoverColor = Color.yellow; // Color when hovered
     public Color clickColor = Color.red;   // Color when left-clicked
     public static string Selected;
@@ -11,6 +13,11 @@ public class HoverChangeColor : MonoBehaviour
     public bool isClicked = false; // Bool to track click state
     public bool isHovered = false;
     public bool isWhite;
+
+    private GameObject cube;
+
+    
+
 
     // Delegate and Event
     public delegate void ObjectClicked(GameObject clickedObject);
@@ -29,10 +36,14 @@ public class HoverChangeColor : MonoBehaviour
         objectRenderer = GetComponent<Renderer>();
         originalColor = objectRenderer.material.color;
         player = Camera.main.GetComponent<AudioSource>();
+        cube = GameObject.Find("Cube");
+        cubeobjectRenderer = cube.GetComponent<Renderer>();
+        cubeoriginalColor = cubeobjectRenderer.material.color;
     }
 
     void Update()
     {
+        
         if(this.transform.name != Selected) {
             isClicked = false;
         }
@@ -72,16 +83,32 @@ public class HoverChangeColor : MonoBehaviour
         // Update colors based on state
         if (isClicked)
         {
+            
             objectRenderer.material.color = clickColor;
+            //cube.transform.position = transform.position + Vector3.up * 3.0f;
         }
         else if (isHovered)
         {
+            
             objectRenderer.material.color = hoverColor;
+            //cube.transform.position = transform.position + Vector3.up * 3.0f;
+
         }
         else
         {
+            
             objectRenderer.material.color = originalColor;
         }
+        RaycastHit hita;
+        /*if (Physics.Raycast(cube.transform.position, Vector3.down, out hita, Mathf.Infinity))
+        {
+            Renderer pieceRenderer = hita.collider.GetComponent<Renderer>();
+            if (pieceRenderer != null)
+            {
+                cubeobjectRenderer.material.color = pieceRenderer.material.color;
+            }
+        }*/
+        
     }
 
     public void unClick(){
@@ -94,6 +121,14 @@ public class HoverChangeColor : MonoBehaviour
     public bool checkTurnValid(Transform t){
         return t.gameObject.CompareTag("White") && (GameManager.currentTurn == GameManager.TurnState.white) ||
         t.gameObject.CompareTag("Black") && (GameManager.currentTurn == GameManager.TurnState.black);
+    }
+
+    public bool checkisClicked(){
+        return isClicked;
+    }
+
+    public bool checkisHovered(){
+        return isHovered;
     }
 
 }

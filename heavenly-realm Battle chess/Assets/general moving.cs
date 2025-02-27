@@ -40,9 +40,10 @@ public class generalmoving : MonoBehaviour
 
 
     // Update is called once per frame
-    void Update()
+     void Update()
     {
-        if(!battle) {
+        if (!battle)
+        {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
@@ -50,74 +51,46 @@ public class generalmoving : MonoBehaviour
             {
                 Transform hitTransform = hit.transform;
 
-                if (hitTransform != null /*&& hitTransform.parent == this.transform*/)
+                if (hitTransform != null && Input.GetMouseButtonDown(0) && allowClick && curObject != null && hitTransform.childCount < 2)
                 {
-                    if (Input.GetMouseButtonDown(0) && allowClick && curObject != null && hitTransform.childCount < 2)
+                    curGrid = hitTransform.gameObject;
+                    lastTargetParent = hitTransform;
+                    
+                    if (hitTransform.childCount == 0)
                     {
-                        if (curGrid == null) // First click
+                        if (IsValidMove(curObject, hitTransform.gameObject))
                         {
-                            curGrid = hitTransform.gameObject;
-                            HighlightGrid(curGrid, Color.blue); // Turn the grid blue
+                            allowClick = false;
+                            Move(curObject, hitTransform.gameObject);
                         }
-                        else if (curGrid == hitTransform.gameObject) // Second click to confirm
+                        else
                         {
-                            // Confirm the move
-                            if (hitTransform.childCount == 0)
-                            {
-                            // allowClick = false;
-                                lastTargetParent = hitTransform; // Store the parent for later use
-                            // Move(curObject, hitTransform.gameObject);
-                                if (IsValidMove(curObject, hitTransform.gameObject))
-                                {
-
-                                    allowClick = false;
-
-                                    Move(curObject, hitTransform.gameObject);
-                                } else
-                                {
-                                    // Invalid move: let the player try again
-                                    Debug.Log("Invalid move!");
-                                    allowClick = true;            // Re-enable clicks
-                                    ResetGridHighlight();        // Remove any highlight
-                                    curGrid = null;              // Clear the selection
-                                    //ResetGridHighlight();        // Remove any highlight
-                                }
-                            }
-                            else if (hitTransform.GetChild(0).tag != curObject.tag)
-                            {
-                                allowClick = false;
-                                lastTargetParent = hitTransform; // Store the parent for later use
-                                //Move(curObject, hitTransform.gameObject);
-                                if (IsValidMove(curObject, hitTransform.gameObject))
-                                {
-                                    allowClick = false;
-                                    inBattlePiece = curObject;
-                                    retrieve = inBattlePiece.transform.parent.gameObject;
-                                    Move(curObject, hitTransform.gameObject);
-                                } else
-                                {
-                                    // Invalid move: let the player try again
-                                    allowClick = true;            // Re-enable clicks
-                                    ResetGridHighlight();        // Remove any highlight
-                                    curGrid = null;              // Clear the selection
-                                    //ResetGridHighlight();        // Remove any highlight
-                                }
-                            }
-
-                            ResetGridHighlight(); // Reset grid highlight after confirmation
+                            Debug.Log("Invalid move!");
+                            allowClick = true;
+                            curGrid = null;
                         }
-                        else // Clicking a different grid cancels the selection
+                    }
+                    else if (hitTransform.GetChild(0).tag != curObject.tag)
+                    {
+                        if (IsValidMove(curObject, hitTransform.gameObject))
                         {
-                            ResetGridHighlight();
-                            curGrid = hitTransform.gameObject;
-                            HighlightGrid(curGrid, Color.blue); // Highlight the new grid
+                            allowClick = false;
+                            inBattlePiece = curObject;
+                            retrieve = inBattlePiece.transform.parent.gameObject;
+                            Move(curObject, hitTransform.gameObject);
+                        }
+                        else
+                        {
+                            allowClick = true;
+                            curGrid = null;
                         }
                     }
                 }
             }
         }
-        
     }
+
+
 
     public static bool IsValidMove(GameObject chessObject, GameObject targetSquare)
     {
@@ -193,7 +166,7 @@ public class generalmoving : MonoBehaviour
             curObject.GetComponent<HoverChangeColor>().unClick();
         }
         curObject = null;
-        ResetGridHighlight();
+        //ResetGridHighlight();
         curGrid = null;
     }
 
@@ -206,19 +179,16 @@ public class generalmoving : MonoBehaviour
     {
         if (chessObject == null || targetSquareObject == null)
         {
-            Debug.LogError("Chess Object or Target Square Object is null!");
             return;
         }
 
-        // Get the original Y position of the chess object
+
         float originalY = chessObject.transform.position.y;
-
-        // Set the target position to the target square's position, maintaining the object's original Y position
         Vector3 targetPosition = new Vector3(targetSquareObject.transform.position.x, originalY, targetSquareObject.transform.position.z);
-
-        // Start the movement coroutine to move the object only on the X and Z axes
         StartCoroutine(MoveToTarget(chessObject, targetSquareObject.transform, targetPosition, moveSpeed, OnMoveCompleted));
     }
+
+
 
     public IEnumerator MoveToTarget(GameObject chessObject, Transform targetParent, Vector3 targetPosition, float moveSpeed, Action onMoveComplete)
     {
@@ -263,7 +233,7 @@ void HighlightGrid(GameObject grid, Color color)
             // Store the original color if it's not already stored
             if (!originalColors.ContainsKey(grid))
             {
-                originalColors[grid] = renderer.material.color;
+                originalColors[grid] = renderer.material.color;         
             }
 
             // Change the color of the grid
@@ -273,17 +243,23 @@ void HighlightGrid(GameObject grid, Color color)
 
 void ResetGridHighlight()
     {
-        if (curGrid != null)
+        /*if (curGrid != null)
         {
             Renderer renderer = curGrid.GetComponent<Renderer>();
             if (renderer != null && originalColors.ContainsKey(curGrid))
             {
-                // Reset to the original color
-                renderer.material.color = originalColors[curGrid];
+                if (renderer.material.color != Color.blue){
+                    // Reset to the original color
+                    renderer.material.color = originalColors[curGrid];
+                    Debug.Log(0);
+                } else {
+                    renderer.material.color = Color.cyan;
+                    Debug.Log(1);
+                }                
             }
 
             curGrid = null; // Clear the current grid
-        }
+        }*/
     }
 
 public void SaveCameraTransform(Transform cameraTransform)
@@ -366,6 +342,8 @@ public void SaveCameraTransform(Transform cameraTransform)
         GameManager.NextState();
         StartCoroutine(SmoothTransition(OnCameraTransitionCompleted0, savedPosition, savedRotation, 60));
     }
+
+    
 
 
 }

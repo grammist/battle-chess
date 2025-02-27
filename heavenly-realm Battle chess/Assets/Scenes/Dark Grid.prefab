@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4174395712220803539}
   - component: {fileID: 1408825272215649658}
   - component: {fileID: 2834970458825906662}
+  - component: {fileID: -630374391505660701}
   m_Layer: 0
   m_Name: Dark Grid
   m_TagString: Untagged
@@ -120,3 +121,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   curObject: {fileID: 0}
   highlightColor: {r: 0, g: 1, b: 1, a: 1}
+  whiteColor: {r: 1, g: 1, b: 1, a: 1}
+  blackColor: {r: 0, g: 0, b: 0, a: 1}
+--- !u!114 &-630374391505660701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8095780797208546013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 535383530437dab46931643cad005fdc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
