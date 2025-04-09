@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class RookMovement : MonoBehaviour
 {
+
+    public bool hasMoved = false;
     // This method checks if the target square is a valid move for the rook.
     public bool IsValidMove(GameObject targetSquare)
     {
@@ -14,13 +16,13 @@ public class RookMovement : MonoBehaviour
         int xDiff = targetCoords.x - currentCoords.x;
         int zDiff = targetCoords.y - currentCoords.y;
 
-        //Debug.Log($"Rook currentCoords: {currentCoords}, targetCoords: {targetCoords}, xDiff: {xDiff}, zDiff: {zDiff}");
+        Debug.Log($"Rook currentCoords: {currentCoords}, targetCoords: {targetCoords}, xDiff: {xDiff}, zDiff: {zDiff}");
 
         // Rook must move either horizontally or vertically.
         // If both xDiff and zDiff are non-zero, it's invalid.
         if (xDiff != 0 && zDiff != 0)
         {
-            //Debug.Log("Rook cannot move diagonally.");
+            Debug.Log("Rook cannot move diagonally.");
             return false;
         }
 
@@ -33,7 +35,7 @@ public class RookMovement : MonoBehaviour
         {
             if (square.transform.childCount > 0)
             {
-                //Debug.Log("A piece is blocking the rook's path.");
+                Debug.Log("A piece is blocking the rook's path.");
                 return false;
             }
         }
@@ -45,17 +47,17 @@ public class RookMovement : MonoBehaviour
             GameObject occupyingPiece = targetSquare.transform.GetChild(0).gameObject;
             if (occupyingPiece.tag == this.tag)
             {
-                //Debug.Log("Target square is occupied by your own piece. Invalid move.");
+                Debug.Log("Target square is occupied by your own piece. Invalid move.");
                 return false;
             }
             else
             {
-                //Debug.Log("Rook can capture the opposing piece.");
+                Debug.Log("Rook can capture the opposing piece.");
             }
         }
         else
         {
-            //Debug.Log("Rook can move to the empty square.");
+            Debug.Log("Rook can move to the empty square.");
         }
 
         return true;

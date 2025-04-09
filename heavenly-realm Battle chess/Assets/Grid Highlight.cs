@@ -79,7 +79,8 @@ public class GridHighlight : MonoBehaviour
 
     private void UpdateObjectHighlight()
     {
-        if (curObject != null && generalmoving.IsValidMove(curObject, this.gameObject))
+        generalmoving gm = FindObjectOfType<generalmoving>();
+        if (curObject != null && gm.IsValidMove(curObject, this.gameObject))
         {
             curColor = highlightColor;
             colorChange();
