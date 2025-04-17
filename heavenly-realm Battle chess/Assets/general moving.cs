@@ -29,6 +29,8 @@ public class generalmoving : MonoBehaviour
     [SerializeField] private GameObject whiteKnightPrefab;
     [SerializeField] private GameObject blackKnightPrefab;
 
+
+
     [SerializeField] private Transform boardTransform;
 
     void Start()
