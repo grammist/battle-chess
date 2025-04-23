@@ -13,10 +13,15 @@ public class QueenMovement : MonoBehaviour
         Vector2Int currentCoords = GetBoardCoordinates(this.transform.parent.position);
         Vector2Int targetCoords = GetBoardCoordinates(targetSquare.transform.position);
 
+        // ✅ Prevent moving to the same square
+        if (currentCoords == targetCoords)
+        {
+            //Debug.Log("Cannot move to the same square.");
+            return false;
+        }
+
         int xDiff = targetCoords.x - currentCoords.x;
         int zDiff = targetCoords.y - currentCoords.y;
-
-        //Debug.Log($"Queen currentCoords: {currentCoords}, targetCoords: {targetCoords}, xDiff: {xDiff}, zDiff: {zDiff}");
 
         // 2. Check movement direction to see if it's valid for a queen
         //    The queen moves like a rook OR bishop: horizontal, vertical, or diagonal

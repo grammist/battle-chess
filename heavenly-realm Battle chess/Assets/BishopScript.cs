@@ -4,20 +4,21 @@ using UnityEngine;
 
 public class BishopMovement : MonoBehaviour
 {
-    /// <summary>
-    /// Checks if the bishop can move from its current square to the target square.
-    /// </summary>
     public bool IsValidMove(GameObject targetSquare)
     {
         // Convert positions to board coordinates
         Vector2Int currentCoords = GetBoardCoordinates(this.transform.parent.position);
         Vector2Int targetCoords = GetBoardCoordinates(targetSquare.transform.position);
 
+        // ✅ Prevent moving to the same square
+        if (currentCoords == targetCoords)
+        {
+            //Debug.Log("Cannot move bishop to the same square.");
+            return false;
+        }
+
         int xDiff = targetCoords.x - currentCoords.x;
         int zDiff = targetCoords.y - currentCoords.y;
-
-        //Debug.Log($"Bishop currentCoords: {currentCoords}, targetCoords: {targetCoords}, " +
-                  //$"xDiff: {xDiff}, zDiff: {zDiff}");
 
         // A bishop must move diagonally: |xDiff| == |zDiff|
         if (Mathf.Abs(xDiff) != Mathf.Abs(zDiff))
@@ -61,23 +62,14 @@ public class BishopMovement : MonoBehaviour
         return true;
     }
 
-    /// <summary>
-    /// Returns a list of squares between two board coordinates (exclusive of start and end).
-    /// Used to ensure there are no pieces blocking the bishop's path.
-    /// </summary>
     private List<GameObject> GetSquaresBetween(Vector2Int start, Vector2Int end)
     {
         List<GameObject> squares = new List<GameObject>();
 
-        // Determine the direction of movement along both axes
         int xStep = (end.x > start.x) ? 1 : -1;
         int zStep = (end.y > start.y) ? 1 : -1;
-
-        // The number of steps to move diagonally
         int steps = Mathf.Abs(end.x - start.x);
 
-        // Collect squares in between (exclude the final square)
-        // We start from the square adjacent to the start and move to one before the end
         for (int i = 1; i < steps; i++)
         {
             int x = start.x + xStep * i;
@@ -93,14 +85,10 @@ public class BishopMovement : MonoBehaviour
         return squares;
     }
 
-    /// <summary>
-    /// Example method to convert a world position to board coordinates.
-    /// Adjust `squareSize` and `boardOrigin` for your specific board setup.
-    /// </summary>
     private Vector2Int GetBoardCoordinates(Vector3 worldPosition)
     {
-        float squareSize = 1.0f; // Your board's tile size
-        Vector3 boardOrigin = this.transform.parent.parent.position; // The ChessBoard's position
+        float squareSize = 1.0f;
+        Vector3 boardOrigin = this.transform.parent.parent.position;
 
         int x = Mathf.RoundToInt((worldPosition.x - boardOrigin.x) / squareSize);
         int z = Mathf.RoundToInt((worldPosition.z - boardOrigin.z) / squareSize);
@@ -108,10 +96,6 @@ public class BishopMovement : MonoBehaviour
         return new Vector2Int(x, z);
     }
 
-    /// <summary>
-    /// Example method to find a square `GameObject` by its board coordinates.
-    /// Assumes your board squares are children of the board parent.
-    /// </summary>
     private GameObject GetSquareAtCoordinates(Vector2Int coords)
     {
         foreach (Transform child in this.transform.parent.parent)
