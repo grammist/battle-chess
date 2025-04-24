@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -185,6 +185,61 @@ public class KingMovement : MonoBehaviour
         }
     }
 
+    public bool IsInCheck()
+    {
+        Debug.Log("Checking if king is in check…");
+
+        // 1) Find this king’s square
+        Vector2Int myCoords = GetBoardCoordinates(this.transform.parent.position);
+        GameObject mySquare = FindBoardSquare(myCoords);
+        if (mySquare == null)
+        {
+            Debug.LogError($"King square not found at {myCoords}");
+            return false;
+        }
+
+        // 2) Grab your generalmoving so you can ask “can they move here?”
+        var gm = FindObjectOfType<generalmoving>();
+        if (gm == null)
+        {
+            Debug.LogError("generalmoving instance not found!");
+            return false;
+        }
+
+        // 3) Loop all enemy pieces
+        Transform board = gm.getboardTransfrom();
+        foreach (Transform square in board)
+        {
+            if (square.childCount == 0) continue;
+            var piece = square.GetChild(0).gameObject;
+            if (piece.tag == this.tag) continue;              // skip allies
+            if (gm.IsValidMove(piece, mySquare))              // can they attack the king?
+            {
+                Debug.Log($"King is in check by {piece.name} at {GetBoardCoordinates(piece.transform.parent.position)}");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Finds the board-tile GameObject at a given coordinate by asking generalmoving’s boardTransform getter.
+    /// </summary>
+    private GameObject FindBoardSquare(Vector2Int coords)
+    {
+        var gm = FindObjectOfType<generalmoving>();
+        Transform board = gm.getboardTransfrom();
+        foreach (Transform sq in board)
+        {
+            Vector2Int sqCoords = GetBoardCoordinates(sq.position);
+            if (sqCoords == coords) return sq.gameObject;
+        }
+        return null;
+    }
+
+
+
     // ------------------------
     // Utility methods:
 
@@ -218,4 +273,6 @@ public class KingMovement : MonoBehaviour
 
         return new Vector2Int(x, z);
     }
+
+
 }

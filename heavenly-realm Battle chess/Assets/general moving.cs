@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class generalmoving : MonoBehaviour
@@ -473,6 +474,53 @@ public class generalmoving : MonoBehaviour
         return new Vector2Int(x, z);
     }
 
+    /// <summary>
+    /// Returns true only if the side whose king has 'kingTag' is in checkmate.
+    /// </summary>
+    private bool IsCheckmate(string kingTag)
+    {
+        // locate that king
+        var king = FindObjectsOfType<KingMovement>()
+                   .FirstOrDefault(k => k.CompareTag(kingTag));
+        if (king == null) return false;
+        // must be in check…
+        if (!king.IsInCheck()) return false;
+        // …and king must have no escape squares
+        if (king.HasLegalKingMoves()) return false;
+        // now try every other friendly piece to see if it can block or capture the attacker
+        foreach (Transform sq in boardTransform)
+        {
+            if (sq.childCount == 0) continue;
+            var piece = sq.GetChild(0).gameObject;
+            if (!piece.CompareTag(kingTag)) continue;
+
+            // try moving it to every square
+            foreach (Transform dest in boardTransform)
+            {
+                if (dest.childCount > 0 && dest.GetChild(0).tag == kingTag) continue;
+                if (!IsValidMove(piece, dest.gameObject)) continue;
+
+                // simulate
+                var origParent = piece.transform.parent;
+                var captured = dest.childCount == 1 ? dest.GetChild(0).gameObject : null;
+                piece.transform.SetParent(dest, false);
+                if (captured) Destroy(captured);
+
+                bool stillInCheck = king.IsInCheck();
+
+                // undo
+                piece.transform.SetParent(origParent, false);
+                if (captured) Instantiate(captured, dest.position, Quaternion.identity)
+                              .transform.SetParent(dest, false);
+
+                if (!stillInCheck) return false;
+            }
+        }
+        // no escapes, no blocks → checkmate!
+        return true;
+    }
+
+
     void HighlightGrid(GameObject grid, Color color)
     {
         Renderer renderer = grid.GetComponent<Renderer>();
@@ -497,5 +545,10 @@ public class generalmoving : MonoBehaviour
             }
             curGrid = null;
         }
+    }
+
+    public Transform getboardTransfrom()
+    {
+        return boardTransform;
     }
 }
