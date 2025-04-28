@@ -486,7 +486,7 @@ public class generalmoving : MonoBehaviour
         // must be in check…
         if (!king.IsInCheck()) return false;
         // …and king must have no escape squares
-        if (king.HasLegalKingMoves()) return false;
+        if (king.HasLegalMoves()) return false;
         // now try every other friendly piece to see if it can block or capture the attacker
         foreach (Transform sq in boardTransform)
         {

@@ -168,6 +168,68 @@ public class KingMovement : MonoBehaviour
     }
 
     /// <summary>
+    /// True if the king has at least one legal king-move (ignoring block/capture by other pieces).
+    /// </summary>
+    public bool HasLegalMoves()
+    {
+        // Current square coords
+        Vector2Int cur = GetBoardCoordinates(this.transform.parent.position);
+
+        // Loop all 8 neighbors
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                if (dx == 0 && dz == 0) continue;
+
+                Vector2Int test = new Vector2Int(cur.x + dx, cur.y + dz);
+                GameObject square = FindBoardSquare(test);
+                if (square == null) continue;
+
+                // 1) Can the king *legally* move there at all?
+                if (!IsValidMove(square)) continue;
+
+                // 2) Would the king be *in check* if it actually went there?
+                if (!WouldBeInCheckAfterMove(square))
+                    return true;
+            }
+        }
+
+        // no escape found
+        return false;
+    }
+
+    /// <summary>
+    /// Simulate moving the king to [targetSquare], check IsInCheck, then restore everything.
+    /// </summary>
+    private bool WouldBeInCheckAfterMove(GameObject targetSquare)
+    {
+        Transform originalParent = this.transform.parent;
+        Vector3 originalPos = transform.localPosition;
+        GameObject captured = null;
+
+        // If there's an enemy there, stash it
+        if (targetSquare.transform.childCount > 0)
+            captured = targetSquare.transform.GetChild(0).gameObject;
+
+        // 1) Remove any captured piece
+        if (captured != null) captured.SetActive(false);
+
+        // 2) Move this king
+        transform.SetParent(targetSquare.transform, false);
+
+        // 3) Check
+        bool inCheck = IsInCheck();
+
+        // 4) Undo
+        transform.SetParent(originalParent, false);
+        transform.localPosition = originalPos;
+        if (captured != null) captured.SetActive(true);
+
+        return inCheck;
+    }
+
+    /// <summary>
     /// Check if target square is empty or occupied by opponent piece (valid for normal king move).
     /// </summary>
     private bool IsSquareFreeOrCapturable(GameObject targetSquare)
