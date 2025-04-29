@@ -35,6 +35,15 @@ public class generalmoving : MonoBehaviour
     private GameObject b1;
     private GameObject b2;
 
+    [SerializeField] private GameObject whiteQueenPrefab;
+    [SerializeField] private GameObject blackQueenPrefab;
+    [SerializeField] private GameObject whiteRookPrefab;
+    [SerializeField] private GameObject blackRookPrefab;
+    [SerializeField] private GameObject whiteBishopPrefab;
+    [SerializeField] private GameObject blackBishopPrefab;
+    [SerializeField] private GameObject whiteKnightPrefab;
+    [SerializeField] private GameObject blackKnightPrefab;
+
 
     void Start(){
         uiPanel.SetActive(false); 
@@ -69,7 +78,7 @@ public class generalmoving : MonoBehaviour
                         }
                         else
                         {
-                            Debug.Log("Invalid move!");
+                            //Debug.Log("Invalid move!");
                             allowClick = true;
                             curGrid = null;
                         }
@@ -212,6 +221,7 @@ public class generalmoving : MonoBehaviour
     private void OnMoveCompleted()
     {
         player.PlayOneShot(seM);
+
         if (lastTargetParent != null && lastTargetParent.childCount == 2)
         {
             battle = true;
@@ -222,14 +232,105 @@ public class generalmoving : MonoBehaviour
             Transform cameraTransform = Camera.main.transform;
             SaveCameraTransform(cameraTransform);
             StartCoroutine(SmoothTransition(OnCameraTransitionCompleted, curObject.transform.position + new Vector3(0, 0.1f, 2), Quaternion.Euler(-30, 180, 0), 100));
-            
         }
+
         GameManager.NextState();
-        if(curObject != null) {
+
+        if (curObject != null)
+        {
+            PawnMovement pm = curObject.GetComponentInChildren<PawnMovement>();
+            if (pm != null)
+            {
+                // Debug.Log("Check for Pawn");
+                Vector2Int finalCoords = GetBoardCoordinates(curObject.transform.position);
+                // Debug.Log("Pawn finalCoords: " + finalCoords);
+                if (finalCoords.y == -8 || finalCoords.y == -1)
+                {
+                    Debug.Log("Check for promotion");
+                    CheckForPromotion(curObject);
+                }
+            }
+
             curObject.GetComponent<HoverChangeColor>().unClick();
         }
+
         curObject = null;
     }
+
+    private GameObject GetPromotionPrefab(bool isWhite, string pieceType)
+    {
+        switch (pieceType)
+        {
+            case "Rook":
+                return isWhite ? whiteRookPrefab : blackRookPrefab;
+            case "Bishop":
+                return isWhite ? whiteBishopPrefab : blackBishopPrefab;
+            case "Knight":
+                return isWhite ? whiteKnightPrefab : blackKnightPrefab;
+            default:
+                return isWhite ? whiteQueenPrefab : blackQueenPrefab;
+        }
+    }
+
+    private Vector2Int GetBoardCoordinates(Vector3 worldPosition)
+    {
+        
+        int x = Mathf.RoundToInt((12 - worldPosition.x) / 2f);
+
+        
+        int y = Mathf.RoundToInt((worldPosition.z - 2) / 2f);
+
+        return new Vector2Int(x, y);
+    }
+
+
+
+    private void CheckForPromotion(GameObject pawnObject)
+    {
+        Vector2Int finalCoords = GetBoardCoordinates(pawnObject.transform.position);
+        bool isWhite = pawnObject.CompareTag("White");
+
+        // Example: White final rank = y == -6, Black final rank = y == 1
+        if ((isWhite && finalCoords.y == -8) ||
+            (!isWhite && finalCoords.y == -1))
+        {
+            Debug.Log("Pawn on promotion rank. Requesting Promotion UI...");
+            PromotionUI.Instance.ShowPromotionPanel(pawnObject);
+        }
+    }
+
+    public void PerformPromotion(GameObject pawnObject, string pieceType)
+    {
+        Debug.Log($"Promoting pawn to {pieceType}!");
+
+        Transform parentSquare = pawnObject.transform.parent;
+        bool isWhite = pawnObject.CompareTag("White");
+
+        Destroy(pawnObject);
+
+        GameObject newPiecePrefab = GetPromotionPrefab(isWhite, pieceType);
+        if (newPiecePrefab == null)
+        {
+            Debug.LogError($"No prefab found for {pieceType}");
+            return;
+        }
+
+        GameObject newPiece = Instantiate(newPiecePrefab, parentSquare.position, Quaternion.identity);
+        newPiece.transform.SetParent(parentSquare);
+
+        newPiece.transform.localScale = newPiecePrefab.transform.localScale;
+        float yOffset = 0.5f;
+        Vector3 finalPos = new Vector3(
+            parentSquare.position.x,
+            parentSquare.position.y + yOffset,
+            parentSquare.position.z
+        );
+        newPiece.transform.position = finalPos;
+
+        Debug.Log($"Pawn promoted to {pieceType}!");
+    }
+
+
 
 void HighlightGrid(GameObject grid, Color color)
     {

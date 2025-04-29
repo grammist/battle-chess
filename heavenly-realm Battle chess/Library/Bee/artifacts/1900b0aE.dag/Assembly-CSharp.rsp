@@ -113,6 +113,7 @@
 -define:ENABLE_UNITY_COLLECTIONS_CHECKS
 -define:ENABLE_BURST_AOT
 -define:UNITY_TEAM_LICENSE
+-define:UNITY_PRO_LICENSE
 -define:ENABLE_CUSTOM_RENDER_TEXTURE
 -define:ENABLE_DIRECTOR
 -define:ENABLE_LOCALIZATION
@@ -378,6 +379,7 @@
 "Assets/Manager.cs"
 "Assets/MenuCamera.cs"
 "Assets/PawnMovement.cs"
+"Assets/PromotionUI.cs"
 "Assets/Queen Script.cs"
 "Assets/RookScript.cs"
 "Assets/Timeout Penalty.cs"
