@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using TMPro;
+
 
 public class generalmoving : MonoBehaviour
 {
@@ -31,8 +33,17 @@ public class generalmoving : MonoBehaviour
     [SerializeField] private GameObject blackKnightPrefab;
 
 
+    [SerializeField] private GameObject checkmatePanel;      // drag in your panel
+    [SerializeField] private TextMeshProUGUI checkmateText;  // drag in the TMP text
+
+
+
 
     [SerializeField] private Transform boardTransform;
+
+
+    // keep this as an instance field:
+    private bool isWhiteTurn = true;
 
     void Start()
     {
@@ -293,7 +304,29 @@ public class generalmoving : MonoBehaviour
         }
 
         curObject = null; // Clear current piece reference
+
+        string losingSide = isWhiteTurn ? "White" : "Black";
+        if (IsCheckmate(losingSide))
+        {
+            ShowCheckmateUI(losingSide);
+            return; // stop further turn switching
+        }
+
     }
+
+    private void ShowCheckmateUI(string losingSide)
+    {
+        if (checkmatePanel != null && checkmateText != null)
+        {
+            checkmateText.text = $"Checkmate! {losingSide} loses!";
+            checkmatePanel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogError("Checkmate UI references are missing!");
+        }
+    }
+
 
     /*private void OnMoveCompleted()
     {
