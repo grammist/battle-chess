@@ -35,6 +35,20 @@ public class generalmoving : MonoBehaviour
     private GameObject b1;
     private GameObject b2;
 
+    private bool whiteKingHasMoved = false;
+    private bool whiteRookKingsideHasMoved = false;  // Rook1 @ H1
+    private bool whiteRookQueensideHasMoved = false; // Rook @ A1
+
+    private bool blackKingHasMoved = false;
+    private bool blackRookKingsideHasMoved = false;  // Rook01 @ H8
+    private bool blackRookQueensideHasMoved = false; // Rook0 @ A8
+
+    private GameObject[,] gridBoard = new GameObject[8, 8];
+    private List<GameObject> castlingExtras = new List<GameObject>();
+    private bool isCastlingRookMoving = false; 
+
+
+
     [SerializeField] private GameObject whiteQueenPrefab;
     [SerializeField] private GameObject blackQueenPrefab;
     [SerializeField] private GameObject whiteRookPrefab;
@@ -45,16 +59,35 @@ public class generalmoving : MonoBehaviour
     [SerializeField] private GameObject blackKnightPrefab;
 
 
-    void Start(){
-        uiPanel.SetActive(false); 
+    void Start()
+    {
+        // 初始化棋盘格子
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                string gridName = $"{(char)('A' + x)}{y + 1}";
+                gridBoard[x, y] = GameObject.Find(gridName);
+            }
+        }
+
+        // 自动检测初始车位置（新增关键逻辑）
+        whiteRookKingsideHasMoved = GameObject.Find("H1").transform.childCount == 0;
+        whiteRookQueensideHasMoved = GameObject.Find("A1").transform.childCount == 0;
+        blackRookKingsideHasMoved = GameObject.Find("H8").transform.childCount == 0;
+        blackRookQueensideHasMoved = GameObject.Find("A8").transform.childCount == 0;
+
+        // 其他原有初始化逻辑...
+        uiPanel.SetActive(false);
         player = Camera.main.GetComponent<AudioSource>();
-        //uiPanel = GameObject.Find("Panel");
     }
 
 
     // Update is called once per frame
-     void Update()
+    void Update()
     {
+        if (isCastlingRookMoving) return;
+
         if (!battle)
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -66,9 +99,28 @@ public class generalmoving : MonoBehaviour
 
                 if (hitTransform != null && Input.GetMouseButtonDown(0) && allowClick && curObject != null && hitTransform.childCount < 2)
                 {
+                    // ✅ 特殊情况：castling 附加目标格
+                    if (castlingExtras.Contains(hitTransform.gameObject))
+                    {
+                        bool isWhite = curObject.CompareTag("White");
+                        bool kingside = hitTransform.name == (isWhite ? "H1" : "H8");
+
+                        string targetGridName = isWhite
+                            ? (kingside ? "G1" : "C1")
+                            : (kingside ? "G8" : "C8");
+
+                        GameObject castlingTarget = GameObject.Find(targetGridName);
+                        if (castlingTarget != null && castlingTarget.transform.childCount == 0)
+                        {
+                            allowClick = false;
+                            Move(curObject, castlingTarget);
+                            return; // ❗️防止落入默认处理
+                        }
+                    }
+
                     curGrid = hitTransform.gameObject;
                     lastTargetParent = hitTransform;
-                    
+
                     if (hitTransform.childCount == 0)
                     {
                         if (IsValidMove(curObject, hitTransform.gameObject))
@@ -78,7 +130,6 @@ public class generalmoving : MonoBehaviour
                         }
                         else
                         {
-                            //Debug.Log("Invalid move!");
                             allowClick = true;
                             curGrid = null;
                         }
@@ -105,54 +156,154 @@ public class generalmoving : MonoBehaviour
 
 
 
-    public static bool IsValidMove(GameObject chessObject, GameObject targetSquare)
+
+
+    public bool IsValidMove(GameObject chessObject, GameObject targetSquare)
     {
-        //PawnMovement pawnMovement = chessObject.GetComponent<PawnMovement>();
-        PawnMovement pawnMovement = chessObject.GetComponentInChildren<PawnMovement>();
-        if (pawnMovement != null)
+        if (chessObject == null || targetSquare == null)
+            return false;
+
+        Vector2Int start = GetBoardCoordinates(chessObject.transform.position);
+        Vector2Int end = GetBoardCoordinates(targetSquare.transform.position);
+
+        // 调试输出（可选）
+        Debug.Log($"移动验证：{chessObject.name} ({start}) -> {targetSquare.name} ({end})");
+
+        // 王车易位特殊处理
+        if (chessObject.GetComponent<KingMovement>() != null)
         {
-            //Debug.Log("Pawn movement");
-            return pawnMovement.IsValidMove(targetSquare);
+            bool isWhite = chessObject.CompareTag("White");
+            
+            // 短易位目标：G1/G8
+            if (end == new Vector2Int(6, isWhite ? 0 : 7))
+                return CanCastle(chessObject, true);
+            
+            // 长易位目标：C1/C8
+            if (end == new Vector2Int(2, isWhite ? 0 : 7))
+                return CanCastle(chessObject, false);
+
+            // 普通王移动
+            return chessObject.GetComponent<KingMovement>().IsValidMove(targetSquare);
         }
 
-        // Add other piece movement validations here
-        KnightMovement knightMovement = chessObject.GetComponent<KnightMovement>();
-        if (knightMovement != null)
+        // 其他棋子类型验证
+        if (chessObject.GetComponentInChildren<PawnMovement>() is PawnMovement pawn && pawn.IsValidMove(targetSquare)) 
+            return true;
+        if (chessObject.GetComponent<KnightMovement>() is KnightMovement knight && knight.IsValidMove(targetSquare)) 
+            return true;
+        if (chessObject.GetComponent<RookMovement>() is RookMovement rook && rook.IsValidMove(targetSquare)) 
+            return true;
+        if (chessObject.GetComponent<BishopMovement>() is BishopMovement bishop && bishop.IsValidMove(targetSquare)) 
+            return true;
+        if (chessObject.GetComponent<QueenMovement>() is QueenMovement queen && queen.IsValidMove(targetSquare)) 
+            return true;
+
+        // 默认返回
+        return false;
+    }
+
+    public List<GameObject> GetExtraCastlingHighlights(GameObject king)
+    {
+        List<GameObject> highlights = new List<GameObject>();
+
+        if (!king.name.Contains("King")) return highlights;
+
+        bool isWhite = king.CompareTag("White");
+        Vector2Int pos = GetBoardCoordinates(king.transform.position);
+
+        if ((isWhite && !whiteKingHasMoved) || (!isWhite && !blackKingHasMoved))
         {
-            //Debug.Log("Knight movement");
-            return knightMovement.IsValidMove(targetSquare);
+            // Kingside
+            if ((isWhite && !whiteRookKingsideHasMoved) || (!isWhite && !blackRookKingsideHasMoved))
+            {
+                GameObject rookSquare = GameObject.Find(isWhite ? "H1" : "H8");
+                GameObject castlingTarget = GameObject.Find(isWhite ? "G1" : "G8");
+
+                if (rookSquare != null && castlingTarget != null &&
+                    rookSquare.transform.childCount > 0 &&
+                    castlingTarget.transform.childCount == 0)
+                {
+                    highlights.Add(rookSquare);
+                    highlights.Add(castlingTarget);
+                }
+            }
+
+            // Queenside
+            if ((isWhite && !whiteRookQueensideHasMoved) || (!isWhite && !blackRookQueensideHasMoved))
+            {
+                GameObject rookSquare = GameObject.Find(isWhite ? "A1" : "A8");
+                GameObject castlingTarget = GameObject.Find(isWhite ? "C1" : "C8");
+
+                if (rookSquare != null && castlingTarget != null &&
+                    rookSquare.transform.childCount > 0 &&
+                    castlingTarget.transform.childCount == 0)
+                {
+                    highlights.Add(rookSquare);
+                    highlights.Add(castlingTarget);
+                }
+            }
         }
 
-        RookMovement rookMovement = chessObject.GetComponent<RookMovement>();
-        if (rookMovement != null)
+        return highlights;
+    }
+
+
+
+    private bool CanCastle(GameObject kingObj, bool kingside)
+    {
+        if (kingObj == null) return false;
+
+        bool isWhite = kingObj.CompareTag("White");
+        Vector2Int start = GetBoardCoordinates(kingObj.transform.position);
+
+        // 检查王和车的移动状态
+        bool kingMoved = isWhite ? whiteKingHasMoved : blackKingHasMoved;
+        bool rookMoved = isWhite 
+            ? (kingside ? whiteRookKingsideHasMoved : whiteRookQueensideHasMoved)
+            : (kingside ? blackRookKingsideHasMoved : blackRookQueensideHasMoved);
+
+        if (kingMoved || rookMoved)
         {
-            //Debug.Log("Rook movement");
-            return rookMovement.IsValidMove(targetSquare); 
+            Debug.Log($"易位失败：{(isWhite ? "白" : "黑")}方 {(kingside ? "短" : "长")}易位王/车已移动");
+            return false;
         }
 
-        BishopMovement bishopMovement = chessObject.GetComponent <BishopMovement>();
-        if (bishopMovement != null)
+        // 检查路径
+        int step = kingside ? 1 : -1;
+        int maxStep = kingside ? 2 : 3; // 短易位检查右侧2格，长易位检查左侧3格
+
+        for (int i = 1; i <= maxStep; i++)
         {
-            //Debug.Log("Bishop movement");
-            return bishopMovement.IsValidMove(targetSquare);
+            int checkX = start.x + i * step;
+            if (checkX < 0 || checkX >= 8)
+            {
+                Debug.Log($"易位路径越界: {checkX}");
+                return false;
+            }
+
+            GameObject grid = gridBoard[checkX, start.y];
+            if (grid == null)
+            {
+                Debug.LogError($"无法找到格子: {checkX},{start.y}");
+                return false;
+            }
+
+            if (grid.transform.childCount > 0)
+            {
+                Debug.Log($"易位路径被阻挡在 {grid.name}（阻挡物：{grid.transform.GetChild(0).name}）");
+                return false;
+            }
         }
 
-        KingMovement kingMovement = chessObject.GetComponent<KingMovement>();
-        if (kingMovement != null)
-        {
-            //Debug.Log("King Movement");
-            return kingMovement.IsValidMove(targetSquare);
-        }
-
-        QueenMovement queenMovement = chessObject.GetComponent<QueenMovement>();
-        if (queenMovement != null)
-        {
-            //Debug.Log("Queen movement");
-            return queenMovement.IsValidMove(targetSquare);
-        }
-
+        Debug.Log($"{(isWhite ? "白" : "黑")}方 {(kingside ? "短" : "长")}易位路径畅通");
         return true;
     }
+
+
+
+
+
+
 
 
     private void OnEnable()
@@ -172,7 +323,26 @@ public class generalmoving : MonoBehaviour
     private void HandleObjectClicked(GameObject clickedObject)
     {
         curObject = clickedObject;
+        castlingExtras.Clear(); // 🔄 每次点击前清空
+
+        // 如果是国王，准备 castling 高亮
+        if (curObject.name.Contains("King"))
+        {
+            bool isWhite = curObject.CompareTag("White");
+
+            string rookKingside = isWhite ? "Rook1" : "Rook01";
+            string rookQueenside = isWhite ? "Rook" : "Rook0";
+
+            GameObject r1 = GameObject.Find(rookKingside);
+            GameObject r2 = GameObject.Find(rookQueenside);
+
+            if (r1 && r1.transform.parent != null)
+                castlingExtras.Add(r1.transform.parent.gameObject);
+            if (r2 && r2.transform.parent != null)
+                castlingExtras.Add(r2.transform.parent.gameObject);
+        }
     }
+
     private void HandleTimeOut()
     {
         if(curObject != null) {
@@ -190,16 +360,26 @@ public class generalmoving : MonoBehaviour
 
     void Move(GameObject chessObject, GameObject targetSquareObject)
     {
-        if (chessObject == null || targetSquareObject == null)
-        {
-            return;
-        }
+        if (chessObject == null || targetSquareObject == null) return;
 
+        curGrid = targetSquareObject;
 
-        float originalY = chessObject.transform.position.y;
-        Vector3 targetPosition = new Vector3(targetSquareObject.transform.position.x, originalY, targetSquareObject.transform.position.z);
-        StartCoroutine(MoveToTarget(chessObject, targetSquareObject.transform, targetPosition, moveSpeed, OnMoveCompleted));
+        Vector3 targetPos = new Vector3(
+            targetSquareObject.transform.position.x,
+            chessObject.transform.position.y,
+            targetSquareObject.transform.position.z
+        );
+
+        StartCoroutine(MoveToTarget(
+            chessObject,
+            targetSquareObject.transform,
+            targetPos,
+            moveSpeed,
+            OnMoveCompleted
+        ));
     }
+
+
 
 
 
@@ -218,6 +398,8 @@ public class generalmoving : MonoBehaviour
         onMoveComplete?.Invoke();
     }
 
+    
+
     private void OnMoveCompleted()
     {
         player.PlayOneShot(seM);
@@ -231,31 +413,89 @@ public class generalmoving : MonoBehaviour
             capturedPiece = child.gameObject;
             Transform cameraTransform = Camera.main.transform;
             SaveCameraTransform(cameraTransform);
-            StartCoroutine(SmoothTransition(OnCameraTransitionCompleted, curObject.transform.position + new Vector3(0, 0.1f, 2), Quaternion.Euler(-30, 180, 0), 100));
+            StartCoroutine(SmoothTransition(
+                OnCameraTransitionCompleted,
+                curObject.transform.position + new Vector3(0, 0.1f, 2),
+                Quaternion.Euler(-30, 180, 0),
+                100
+            ));
+        }
+
+        // ✅ Castling logic
+        if (curObject != null && curObject.name.Contains("King"))
+        {
+            bool isWhite = curObject.CompareTag("White");
+            Vector2Int kingCoord = GetBoardCoordinates(curObject.transform.position);
+            int targetY = isWhite ? 0 : 7;
+
+            // Kingside castling
+            if (kingCoord.x == 6)
+            {
+                string rookName = isWhite ? "Rook1" : "Rook01";
+                GameObject rook = GameObject.Find(rookName);
+                GameObject rookTarget = gridBoard[5, targetY]; // F1 / F8
+
+                if (rook != null && rookTarget != null)
+                {
+                    isCastlingRookMoving = true;
+                    StartCoroutine(MoveToTarget(
+                        rook,
+                        rookTarget.transform,
+                        rookTarget.transform.position,
+                        moveSpeed,
+                        () => {
+                            rook.transform.SetParent(rookTarget.transform);
+                            isCastlingRookMoving = false;
+                            if (isWhite) whiteRookKingsideHasMoved = true;
+                            else blackRookKingsideHasMoved = true;
+                        }
+                    ));
+                }
+            }
+
+            // Queenside castling
+            else if (kingCoord.x == 2)
+            {
+                string rookName = isWhite ? "Rook" : "Rook0";
+                GameObject rook = GameObject.Find(rookName);
+                GameObject rookTarget = gridBoard[3, targetY]; // D1 / D8
+
+                if (rook != null && rookTarget != null)
+                {
+                    isCastlingRookMoving = true;
+                    StartCoroutine(MoveToTarget(
+                        rook,
+                        rookTarget.transform,
+                        rookTarget.transform.position,
+                        moveSpeed,
+                        () => {
+                            rook.transform.SetParent(rookTarget.transform);
+                            isCastlingRookMoving = false;
+                            if (isWhite) whiteRookQueensideHasMoved = true;
+                            else blackRookQueensideHasMoved = true;
+                        }
+                    ));
+                }
+            }
+
+            // 标记王已移动
+            if (isWhite) whiteKingHasMoved = true;
+            else blackKingHasMoved = true;
         }
 
         GameManager.NextState();
 
         if (curObject != null)
         {
-            PawnMovement pm = curObject.GetComponentInChildren<PawnMovement>();
-            if (pm != null)
-            {
-                // Debug.Log("Check for Pawn");
-                Vector2Int finalCoords = GetBoardCoordinates(curObject.transform.position);
-                // Debug.Log("Pawn finalCoords: " + finalCoords);
-                if (finalCoords.y == -8 || finalCoords.y == -1)
-                {
-                    Debug.Log("Check for promotion");
-                    CheckForPromotion(curObject);
-                }
-            }
-
-            curObject.GetComponent<HoverChangeColor>().unClick();
+            curObject.GetComponent<HoverChangeColor>()?.unClick();
         }
 
         curObject = null;
     }
+
+
+
+
 
     private GameObject GetPromotionPrefab(bool isWhite, string pieceType)
     {
@@ -273,15 +513,12 @@ public class generalmoving : MonoBehaviour
     }
 
     private Vector2Int GetBoardCoordinates(Vector3 worldPosition)
-    {
-        
-        int x = Mathf.RoundToInt((12 - worldPosition.x) / 2f);
-
-        
-        int y = Mathf.RoundToInt((worldPosition.z - 2) / 2f);
-
-        return new Vector2Int(x, y);
-    }
+{
+    // 修正后的棋盘坐标转换逻辑
+    int x = Mathf.FloorToInt((worldPosition.x + 7) / 2);
+    int y = Mathf.FloorToInt((worldPosition.z + 7) / 2);
+    return new Vector2Int(x, y);
+}
 
 
 

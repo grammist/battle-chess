@@ -79,9 +79,29 @@ public class GridHighlight : MonoBehaviour
 
     private void UpdateObjectHighlight()
     {
-        if (curObject != null && generalmoving.IsValidMove(curObject, this.gameObject))
+        generalmoving gm = FindObjectOfType<generalmoving>();
+
+        if (curObject != null && gm != null)
         {
-            curColor = highlightColor;
+            // 正常合法移动高亮
+            if (gm.IsValidMove(curObject, this.gameObject))
+            {
+                curColor = highlightColor;
+            }
+            else
+            {
+                // 检查是否是 Castling 的额外高亮格（rook 位置或 castling 目标）
+                List<GameObject> extras = gm.GetExtraCastlingHighlights(curObject);
+                if (extras.Contains(this.gameObject))
+                {
+                    curColor = highlightColor;
+                }
+                else
+                {
+                    curColor = originalColor;
+                }
+            }
+
             colorChange();
         }
         else
@@ -90,6 +110,8 @@ public class GridHighlight : MonoBehaviour
             colorChange();
         }
     }
+
+
 
     // Public method to reset the color to the original
     public void ResetColor()
