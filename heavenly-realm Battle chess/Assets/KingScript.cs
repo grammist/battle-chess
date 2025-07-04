@@ -1,67 +1,100 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class KingMovement : MonoBehaviour
 {
-    /// <summary>
-    /// Check if the King can move from its current square to the target square.
-    /// </summary>
-    public bool IsValidMove(GameObject targetSquare)
+    private generalmoving boardManager;
+    private Vector2Int kingPos;
+
+    void Start()
     {
-        // Get the board coordinates for the King's current square and the target square.
-        Vector2Int currentCoords = GetBoardCoordinates(this.transform.parent.position);
-        Vector2Int targetCoords = GetBoardCoordinates(targetSquare.transform.position);
-
-        int xDiff = Mathf.Abs(targetCoords.x - currentCoords.x);
-        int zDiff = Mathf.Abs(targetCoords.y - currentCoords.y);
-
-        //Debug.Log($"King current = {currentCoords}, target = {targetCoords}, xDiff = {xDiff}, zDiff = {zDiff}");
-
-        // 1. The King can move at most 1 square horizontally, vertically, or diagonally.
-        if (xDiff <= 1 && zDiff <= 1 && (xDiff + zDiff > 0))
-        {
-            // 2. Check if the target square is empty or occupied by opponent's piece.
-            if (targetSquare.transform.childCount == 0)
-            {
-                //Debug.Log("King can move to empty square.");
-                return true;
-            }
-            else
-            {
-                // If there's a piece, ensure it's not the same tag (i.e., not your own piece).
-                GameObject occupyingPiece = targetSquare.transform.GetChild(0).gameObject;
-                if (occupyingPiece.tag != this.tag)
-                {
-                    //Debug.Log("King can capture the opposing piece.");
-                    return true;
-                }
-                else
-                {
-                    //Debug.Log("Target square occupied by same-color piece. Invalid move.");
-                }
-            }
-        }
-        else
-        {
-            //Debug.Log("King move is more than one square away. Invalid move.");
-        }
-
-        return false; // Default invalid
+        boardManager = FindObjectOfType<generalmoving>();
     }
 
-    /// <summary>
-    /// Example method to convert a world position to board coordinates.
-    /// Adjust `squareSize` and `boardOrigin` to match your board.
-    /// </summary>
-    private Vector2Int GetBoardCoordinates(Vector3 worldPosition)
+    public bool IsValidMove(GameObject targetSquare)
     {
-        float squareSize = 2.0f;
-        Vector3 boardOrigin = this.transform.parent.parent.position; // The ChessBoard's position
+        Vector2Int current = boardManager.GetBoardCoordinates(transform.position);
+        Vector2Int target = boardManager.GetBoardCoordinates(targetSquare.transform.position);
 
-        int x = Mathf.RoundToInt((worldPosition.x - boardOrigin.x) / squareSize);
-        int z = Mathf.RoundToInt((worldPosition.z - boardOrigin.z) / squareSize);
+        int dx = Mathf.Abs(target.x - current.x);
+        int dy = Mathf.Abs(target.y - current.y);
 
-        return new Vector2Int(x, z);
+        // King moves 1 square in any direction
+        return (dx <= 1 && dy <= 1 && (dx + dy) > 0);
+    }
+
+    public bool IsInCheck()
+    {
+        Vector2Int kingPos = boardManager.GetBoardCoordinates(transform.position);
+        string opponentTag = CompareTag("White") ? "Black" : "White";
+
+        // Check all pieces on the board
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                //GameObject square = boardManager.getGridBoard[x, y];
+                GameObject square = boardManager.GetSquareAt(x, y);
+                if (square.transform.childCount == 0) continue;
+
+                GameObject piece = square.transform.GetChild(0).gameObject;
+                if (!piece.CompareTag(opponentTag)) continue;
+
+                if (boardManager.IsValidMove(piece, transform.parent.gameObject))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public bool HasLegalMoves()
+    {
+        Vector2Int current = boardManager.GetBoardCoordinates(transform.position);
+
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+
+                int nx = current.x + dx;
+                int ny = current.y + dy;
+
+                if (nx < 0 || ny < 0 || nx >= 8 || ny >= 8) continue;
+
+                //GameObject target = boardManager.gridBoard[nx, ny];
+                GameObject target = boardManager.GetSquareAt(nx, ny);
+
+                if (target.transform.childCount > 0 &&
+                    target.transform.GetChild(0).CompareTag(gameObject.tag))
+                {
+                    continue; // can't capture own piece
+                }
+
+                if (IsValidMove(target))
+                {
+                    // simulate move
+                    Transform originalParent = transform.parent;
+                    Transform captured = target.transform.childCount > 0 ? target.transform.GetChild(0) : null;
+
+                    transform.SetParent(target.transform);
+                    if (captured != null) captured.gameObject.SetActive(false);
+
+                    bool stillInCheck = IsInCheck();
+
+                    // revert move
+                    transform.SetParent(originalParent);
+                    if (captured != null) captured.gameObject.SetActive(true);
+
+                    if (!stillInCheck)
+                        return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

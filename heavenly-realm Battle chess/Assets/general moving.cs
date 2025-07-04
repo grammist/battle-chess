@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using TMPro;
 using UnityEngine;
 
 public class generalmoving : MonoBehaviour
@@ -57,6 +59,12 @@ public class generalmoving : MonoBehaviour
     [SerializeField] private GameObject blackBishopPrefab;
     [SerializeField] private GameObject whiteKnightPrefab;
     [SerializeField] private GameObject blackKnightPrefab;
+
+    [SerializeField] private GameObject checkmatePanel;      // drag in your panel
+    [SerializeField] private TextMeshProUGUI checkmateText;  // drag in the TMP text
+
+    // keep this as an instance field:
+    private bool isWhiteTurn = true;
 
 
     void Start()
@@ -481,6 +489,14 @@ public class generalmoving : MonoBehaviour
             // 标记王已移动
             if (isWhite) whiteKingHasMoved = true;
             else blackKingHasMoved = true;
+
+            string losingSide = isWhiteTurn ? "White" : "Black";
+            if (IsCheckmate(losingSide))
+            {
+                ShowCheckmateUI(losingSide);
+                return; // stop further turn switching
+            }
+
         }
 
         GameManager.NextState();
@@ -493,8 +509,82 @@ public class generalmoving : MonoBehaviour
         curObject = null;
     }
 
+    private void ShowCheckmateUI(string losingSide)
+    {
+        if (checkmatePanel != null && checkmateText != null)
+        {
+            checkmateText.text = $"Checkmate! {losingSide} loses!";
+            checkmatePanel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogError("Checkmate UI references are missing!");
+        }
+    }
 
 
+    /// <summary>
+    /// Returns true only if the side whose king has 'kingTag' is in checkmate.
+    /// </summary>
+    private bool IsCheckmate(string kingTag)
+    {
+        Debug.Log($"[generalmoving] Testing checkmate for {kingTag}…");
+
+        // 1) is in check?
+        KingMovement king = FindObjectsOfType<KingMovement>()
+            .FirstOrDefault(k => k.CompareTag(kingTag));
+        if (king == null)
+        {
+            Debug.LogError("[generalmoving] No king found for tag " + kingTag);
+            return false;
+        }
+
+        if (!king.IsInCheck())
+        {
+            Debug.Log($"[generalmoving] {kingTag} king is NOT in check → not checkmate.");
+            return false;
+        }
+        Debug.Log($"[generalmoving] {kingTag} king IS in check.");
+
+        // 2) can king move out?
+        if (king.HasLegalMoves())
+        {
+            Debug.Log($"[generalmoving] {kingTag} king has at least one legal escape move → not checkmate.");
+            return false;
+        }
+        Debug.Log($"[generalmoving] {kingTag} king has NO legal escape moves.");
+
+        // 3) can any ally block or capture?
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                GameObject square = gridBoard[x, y];
+                if (square.transform.childCount == 0) continue;
+
+                GameObject piece = square.transform.GetChild(0).gameObject;
+                if (!piece.CompareTag(kingTag)) continue;
+
+                // Try moving this piece to every square on the board
+                for (int tx = 0; tx < 8; tx++)
+                {
+                    for (int ty = 0; ty < 8; ty++)
+                    {
+                        GameObject target = gridBoard[tx, ty];
+                        if (IsValidMove(piece, target))
+                        {
+                            Debug.Log($"[generalmoving] Ally {piece.name} can move to {target.name} → not checkmate.");
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        Debug.Log($"[generalmoving] {kingTag} is truly checkmated!");
+        return true;
+    }
 
 
     private GameObject GetPromotionPrefab(bool isWhite, string pieceType)
@@ -512,7 +602,7 @@ public class generalmoving : MonoBehaviour
         }
     }
 
-    private Vector2Int GetBoardCoordinates(Vector3 worldPosition)
+    public Vector2Int GetBoardCoordinates(Vector3 worldPosition)
 {
     // 修正后的棋盘坐标转换逻辑
     int x = Mathf.FloorToInt((worldPosition.x + 7) / 2);
@@ -703,7 +793,11 @@ public void SaveCameraTransform(Transform cameraTransform)
         StartCoroutine(SmoothTransition(OnCameraTransitionCompleted0, savedPosition, savedRotation, 60));
     }
 
-    
+    public GameObject GetSquareAt(int x, int y)
+    {
+        if (x < 0 || x >= 8 || y < 0 || y >= 8) return null;
+        return gridBoard[x, y];
+    }
 
 
 }
