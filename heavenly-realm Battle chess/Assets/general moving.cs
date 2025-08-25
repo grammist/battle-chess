@@ -67,8 +67,54 @@ public class generalmoving : MonoBehaviour
     private bool isWhiteTurn = true;
 
 
+    [SerializeField] private GameObject inCheckPanel;
+    [SerializeField] private TextMeshProUGUI inCheckText;
+
+    // Root that contains ONLY the main board tiles A1..H8 (not the counter board)
+    [SerializeField] private Transform mainBoardRoot;
+
+    // === MAIN BOARD TILES CONTAINER ===
+    // Assign the object whose DIRECT children are A1..H8 (main board only!)
+    [SerializeField] private Transform mainTilesContainer;
+
+    private readonly Dictionary<string, Transform> mainTiles = new Dictionary<string, Transform>();
+
+
+    public static generalmoving Instance { get; private set; }
+
+    void Awake()
+    {
+        Instance = this;
+    }
+
+
     void Start()
     {
+
+        if (mainBoardRoot == null)
+        {
+            Debug.LogError("generalmoving: mainBoardRoot is not assigned in the Inspector. Drag your MAIN board root here.");
+            return;
+        }
+
+        // Build the gridBoard ONLY from tiles under the main board
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                string gridName = $"{(char)('A' + x)}{y + 1}";
+                Transform tile = FindDeepChildByName(mainBoardRoot, gridName);
+                if (tile == null)
+                {
+                    Debug.LogError($"generalmoving: Could not find tile '{gridName}' under mainBoardRoot '{mainBoardRoot.name}'.");
+                }
+                else
+                {
+                    gridBoard[x, y] = tile.gameObject;
+                }
+            }
+        }
+
         // 初始化棋盘格子
         for (int x = 0; x < 8; x++)
         {
@@ -88,6 +134,10 @@ public class generalmoving : MonoBehaviour
         // 其他原有初始化逻辑...
         uiPanel.SetActive(false);
         player = Camera.main.GetComponent<AudioSource>();
+
+        if (inCheckPanel != null)
+            inCheckPanel.SetActive(false);
+
     }
 
 
@@ -163,7 +213,14 @@ public class generalmoving : MonoBehaviour
     }
 
 
-
+    // Find a child anywhere under 'root' by name
+    private static Transform FindDeepChildByName(Transform root, string name)
+    {
+        if (root == null) return null;
+        foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+            if (t.name == name) return t;
+        return null;
+    }
 
 
     public bool IsValidMove(GameObject chessObject, GameObject targetSquare)
@@ -307,13 +364,6 @@ public class generalmoving : MonoBehaviour
         return true;
     }
 
-
-
-
-
-
-
-
     private void OnEnable()
     {
         HoverChangeColor.OnObjectClicked += HandleObjectClicked;
@@ -386,9 +436,6 @@ public class generalmoving : MonoBehaviour
             OnMoveCompleted
         ));
     }
-
-
-
 
 
     public IEnumerator MoveToTarget(GameObject chessObject, Transform targetParent, Vector3 targetPosition, float moveSpeed, Action onMoveComplete)
@@ -497,6 +544,14 @@ public class generalmoving : MonoBehaviour
                 return; // stop further turn switching
             }
 
+            string nextSide = isWhiteTurn ? "Black" : "White";
+            KingMovement nextKing = FindObjectsOfType<KingMovement>().FirstOrDefault(k => k.CompareTag(nextSide));
+
+            if (nextKing != null && nextKing.IsInCheck())
+            {
+                ShowInCheckUI(nextSide);
+            }
+
         }
 
         GameManager.NextState();
@@ -505,6 +560,8 @@ public class generalmoving : MonoBehaviour
         {
             curObject.GetComponent<HoverChangeColor>()?.unClick();
         }
+
+        AfterMoveCheck(curObject);
 
         curObject = null;
     }
@@ -571,11 +628,41 @@ public class generalmoving : MonoBehaviour
                     for (int ty = 0; ty < 8; ty++)
                     {
                         GameObject target = gridBoard[tx, ty];
-                        if (IsValidMove(piece, target))
+                        /*if (IsValidMove(piece, target))
                         {
                             Debug.Log($"[generalmoving] Ally {piece.name} can move to {target.name} → not checkmate.");
                             return false;
+                        }*/
+
+                        if (IsValidMove(piece, target))
+                        {
+                            Transform originalParent = piece.transform.parent;
+                            GameObject capturedPiece = null;
+
+                            // Simulate move
+                            if (target.transform.childCount > 0)
+                            {
+                                capturedPiece = target.transform.GetChild(0).gameObject;
+                                capturedPiece.SetActive(false);
+                            }
+
+                            piece.transform.SetParent(target.transform);
+                            piece.transform.localPosition = Vector3.zero;
+
+                            bool stillInCheck = king.IsInCheck();
+
+                            // Undo move
+                            piece.transform.SetParent(originalParent);
+                            piece.transform.localPosition = Vector3.zero;
+                            if (capturedPiece != null) capturedPiece.SetActive(true);
+
+                            if (!stillInCheck)
+                            {
+                                Debug.Log($"[generalmoving] Ally {piece.name} can move to {target.name} and stop the check → not checkmate.");
+                                return false;
+                            }
                         }
+
                     }
                 }
             }
@@ -602,29 +689,14 @@ public class generalmoving : MonoBehaviour
         }
     }
 
-    public Vector2Int GetBoardCoordinates(Vector3 worldPosition)
-{
-    // 修正后的棋盘坐标转换逻辑
-    int x = Mathf.FloorToInt((worldPosition.x + 7) / 2);
-    int y = Mathf.FloorToInt((worldPosition.z + 7) / 2);
-    return new Vector2Int(x, y);
-}
-
-
-
-    private void CheckForPromotion(GameObject pawnObject)
+    public Vector2Int GetBoardCoordinates(Vector3 worldPos)
     {
-        Vector2Int finalCoords = GetBoardCoordinates(pawnObject.transform.position);
-        bool isWhite = pawnObject.CompareTag("White");
+        int x = Mathf.RoundToInt((worldPos.x + 7)); // adjust based on your leftmost tile
+        int y = Mathf.RoundToInt((worldPos.z + 14) / 2); // maps -14 to 0, -12 to 1, ..., 0 to 7
 
-        // Example: White final rank = y == -6, Black final rank = y == 1
-        if ((isWhite && finalCoords.y == -8) ||
-            (!isWhite && finalCoords.y == -1))
-        {
-            Debug.Log("Pawn on promotion rank. Requesting Promotion UI...");
-            PromotionUI.Instance.ShowPromotionPanel(pawnObject);
-        }
+        return new Vector2Int(x, y);
     }
+
 
     public void PerformPromotion(GameObject pawnObject, string pieceType)
     {
@@ -675,7 +747,82 @@ void HighlightGrid(GameObject grid, Color color)
         }
     }
 
-void ResetGridHighlight()
+    private void ShowInCheckUI(string side)
+    {
+        if (inCheckPanel != null && inCheckText != null)
+        {
+            inCheckText.text = $"⚠ {side} is in check!";
+            inCheckPanel.SetActive(true);
+            StartCoroutine(HideInCheckAfterSeconds(2.5f));  // Optional auto-hide
+        }
+    }
+
+    private void AfterMoveCheck(GameObject movedPiece)
+    {
+
+        if (movedPiece == null) return;
+
+        if (movedPiece.name.Contains("Pawn"))
+        {
+            Vector2Int boardPos = generalmoving.Instance.GetBoardCoordinatesFromWorld(movedPiece.transform.position);
+            Debug.Log("Pawn Y: " + boardPos.y + ", Expected: " + (movedPiece.CompareTag("White") ? -14 : 0));
+
+
+
+            if ((movedPiece.CompareTag("White") && boardPos.y == -14) ||
+                (movedPiece.CompareTag("Black") && boardPos.y == 0))
+            {
+                StartCoroutine(HandlePromotionAfterBattle(movedPiece));
+                //FindObjectOfType<PromotionManager>().ShowPromotionUI(movedPiece);
+                return; // pause flow until promotion completes
+            }
+        }        
+        
+        string movingSide = movedPiece.CompareTag("White") ? "White" : "Black";
+        string opponentSide = movedPiece.CompareTag("White") ? "Black" : "White";
+        // Checkmate check
+        if (IsCheckmate(opponentSide))
+        {
+            ShowCheckmateUI(opponentSide);
+            return; // stop here if checkmate
+        }
+
+        // Check (not checkmate)
+        KingMovement opponentKing = FindObjectsOfType<KingMovement>()
+            .FirstOrDefault(k => k.CompareTag(opponentSide));
+
+        if (opponentKing != null && opponentKing.IsInCheck())
+        {
+            ShowInCheckUI(opponentSide);
+        }
+
+
+
+    }
+
+    private IEnumerator HandlePromotionAfterBattle(GameObject pawn)
+    {
+        // Wait until the mini-game is over
+        while (battle)
+        {
+            yield return null;
+        }
+
+        // Then show promotion
+        FindObjectOfType<PromotionManager>().ShowPromotionUI(pawn);
+    }
+
+
+
+    private IEnumerator HideInCheckAfterSeconds(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        if (inCheckPanel != null)
+            inCheckPanel.SetActive(false);
+    }
+
+
+    void ResetGridHighlight()
     {
         /*if (curGrid != null)
         {
@@ -799,5 +946,71 @@ public void SaveCameraTransform(Transform cameraTransform)
         return gridBoard[x, y];
     }
 
+    public Vector2Int GetBoardCoordinatesFromWorld(Vector3 worldPosition)
+{
+    int x = Mathf.RoundToInt(worldPosition.x);
+    int y = Mathf.RoundToInt(worldPosition.z);
+    return new Vector2Int(x, y);
+}
+
 
 }
+
+// --------------------
+// CHECKMATE SYSTEM DOCUMENTATION
+// --------------------
+
+/*
+ * Checkmate System Overview
+ * ------------------------
+ * The checkmate system in this script is responsible for:
+ *  - Detecting when a king is in check.
+ *  - Determining if a checkmate has occurred (i.e., the king is in check and has no legal moves, and no allied piece can block or capture the threat).
+ *  - Displaying UI feedback for check and checkmate states.
+ *  - Integrating check/checkmate logic into the move flow.
+ *
+ * Key Functions:
+ * --------------
+ * 1. IsCheckmate(string kingTag)
+ *    - Core function that determines if the king of the given side is in checkmate.
+ *    - Steps:
+ *        a) Finds the king by tag.
+ *        b) Checks if the king is in check (via KingMovement.IsInCheck()).
+ *        c) Checks if the king has any legal moves (via KingMovement.HasLegalMoves()).
+ *        d) Checks if any allied piece can block the check or capture the attacking piece by simulating all possible moves.
+ *    - Returns true if all above fail (i.e., checkmate), false otherwise.
+ *
+ * 2. AfterMoveCheck(GameObject movedPiece)
+ *    - Called after each move.
+ *    - Checks if the opponent is in checkmate (calls IsCheckmate).
+ *    - If not, checks if the opponent is in check (calls KingMovement.IsInCheck()).
+ *    - Triggers UI for checkmate or check as appropriate.
+ *
+ * 3. ShowCheckmateUI(string losingSide)
+ *    - Displays the checkmate panel and message.
+ *
+ * 4. ShowInCheckUI(string side)
+ *    - Displays the "in check" panel and message.
+ *
+ * 5. KingMovement.IsInCheck()
+ *    - (Defined elsewhere) Determines if the king is currently under attack.
+ *
+ * 6. KingMovement.HasLegalMoves()
+ *    - (Defined elsewhere) Determines if the king has any legal moves to escape check.
+ *
+ * UI Integration:
+ * ---------------
+ * - When checkmate is detected, ShowCheckmateUI is called to display the result.
+ * - When a king is in check (but not checkmate), ShowInCheckUI is called.
+ *
+ * Move Flow Integration:
+ * ----------------------
+ * - After each move, AfterMoveCheck is called to evaluate the board state for check or checkmate.
+ * - During king moves, IsCheckmate is also checked to handle special cases.
+ *
+ * Notes:
+ * ------
+ * - The checkmate logic simulates all possible moves for all allied pieces to ensure no escape is possible.
+ * - The system relies on KingMovement for check detection and legal move generation.
+ * - The UI panels for check and checkmate must be assigned in the inspector.
+ */
