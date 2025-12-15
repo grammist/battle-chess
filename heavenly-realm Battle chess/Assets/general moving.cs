@@ -1157,7 +1157,7 @@ public class generalmoving : MonoBehaviour
     }
 
 
-    public void PerformPromotion(GameObject pawnObject, string pieceType)
+    /*public void PerformPromotion(GameObject pawnObject, string pieceType)
     {
         Debug.Log($"Promoting pawn to {pieceType}!");
 
@@ -1186,11 +1186,51 @@ public class generalmoving : MonoBehaviour
         newPiece.transform.position = finalPos;
 
         Debug.Log($"Pawn promoted to {pieceType}!");
-    }
+    }*/
+
+
+    /*public GameObject PerformPromotion(GameObject pawnObject, string pieceType)
+    {
+        if (pawnObject == null || pawnObject.transform.parent == null)
+        {
+            Debug.LogError("PerformPromotion: pawn or parent tile missing.");
+            return null;
+        }
+
+        // Resolve tile (A1..H8)
+        Transform tile = pawnObject.transform.parent;
+        while (tile != null &&
+               !(tile.name.Length == 2 && tile.name[0] >= 'A' && tile.name[0] <= 'H' &&
+                 tile.name[1] >= '1' && tile.name[1] <= '8'))
+            tile = tile.parent;
+
+        if (tile == null) { Debug.LogError("PerformPromotion: could not resolve tile."); return null; }
+
+        bool isWhite = pawnObject.CompareTag("White");
+        Destroy(pawnObject);
+
+        GameObject prefab = GetPromotionPrefab(isWhite, pieceType);
+        if (prefab == null) { Debug.LogError($"No prefab for {pieceType}"); return null; }
+
+        // Instantiate and anchor to tile
+        GameObject newPiece = Instantiate(prefab);
+        newPiece.tag = isWhite ? "White" : "Black";
+        newPiece.name = $"{(isWhite ? "White" : "Black")} {pieceType}";
+
+        newPiece.transform.SetParent(tile, worldPositionStays: false);
+        newPiece.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+        newPiece.transform.localRotation = Quaternion.identity;
+        newPiece.transform.localScale = Vector3.one;
+
+        Debug.Log($"Pawn promoted to {pieceType} on {tile.name}.");
+
+        return newPiece;
+    }*/
 
 
 
-void HighlightGrid(GameObject grid, Color color)
+
+    void HighlightGrid(GameObject grid, Color color)
     {
         Renderer renderer = grid.GetComponent<Renderer>();
         if (renderer != null)
@@ -1275,6 +1315,8 @@ void HighlightGrid(GameObject grid, Color color)
 
 
     }
+
+
 
     private bool IsTileName(string n)
     {

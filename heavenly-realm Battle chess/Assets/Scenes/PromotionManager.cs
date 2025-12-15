@@ -1,6 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Linq;
+using UnityEngine;
 using UnityEngine.UI;
-using System.Linq;
 
 public class PromotionManager : MonoBehaviour
 {
@@ -21,8 +21,8 @@ public class PromotionManager : MonoBehaviour
     public GameObject blackBishopModel;
     public GameObject blackKnightModel;
 
-    [Header("Main Board Root (ASSIGN ME)")]
-    [SerializeField] private Transform mainBoardRoot;   // <- single source of truth
+    [Header("Main Board Root (optional: only used if generalmoving.Instance is missing)")]
+    [SerializeField] private Transform mainBoardRoot;
 
     [Header("Desired WORLD Scales")]
     public Vector3 queenScale = new Vector3(0.005f, 0.015f, 0.005f);
@@ -36,6 +36,10 @@ public class PromotionManager : MonoBehaviour
 
     private GameObject promotingPawn;
 
+    [Header("Promotion Styling (optional)")]
+    [SerializeField] private Vector3 blackQueenScale = new Vector3(0.005f, 0.015f, 0.005f);
+    [SerializeField] private float blackQueenYOffset = 0.5f;                     // vertical lift after scaling
+
 
     private void Start()
     {
@@ -44,7 +48,8 @@ public class PromotionManager : MonoBehaviour
             Debug.LogError("PromotionManager: One or more button references are missing.");
             return;
         }
-        promotionPanel?.SetActive(false);
+
+        if (promotionPanel) promotionPanel.SetActive(false);
 
         queenButton.onClick.AddListener(() => Promote("Queen"));
         rookButton.onClick.AddListener(() => Promote("Rook"));
@@ -55,156 +60,164 @@ public class PromotionManager : MonoBehaviour
     public void ShowPromotionUI(GameObject pawn)
     {
         promotingPawn = pawn;
-        promotionPanel?.SetActive(true);
+        if (promotionPanel) promotionPanel.SetActive(true);
     }
 
     public void Promote(string pieceType)
     {
-        if (!promotingPawn) { Debug.LogError("PromotionManager: promotingPawn is null."); return; }
-        if (!mainBoardRoot)
+        if (!promotingPawn)
         {
-            Debug.LogError("PromotionManager: mainBoardRoot is not assigned. Drag your MAIN board root here.");
+            Debug.LogError("PromotionManager: promotingPawn is null.");
             return;
         }
 
-        // side/tag
+        // --- figure out side / tag ---
         bool isWhite = promotingPawn.CompareTag("White");
         string pawnTag = promotingPawn.tag;
 
-        // ---------- RESOLVE MAIN-BOARD TILE BY NAME ----------
-        string tileName = promotingPawn.transform.parent ? promotingPawn.transform.parent.name : null;
-        if (string.IsNullOrEmpty(tileName))
+        // --- climb to the tile object (A1..H8) ---
+        Transform tile = promotingPawn.transform.parent;
+        while (tile != null && !IsTileName(tile.name))
+            tile = tile.parent;
+
+        if (!tile)
         {
-            Debug.LogError("PromotionManager: Pawn has no parent tile name to resolve.");
+            Debug.LogError("PromotionManager: could not resolve tile from pawn's parents.");
             return;
         }
 
-        Transform parentTile = FindDeepChildByName(mainBoardRoot, tileName);
-        if (!parentTile)
+        // Prefer the MAIN board tile from generalmoving, if available
+        if (generalmoving.Instance != null)
         {
-            Debug.LogError($"PromotionManager: Could not find tile '{tileName}' under mainBoardRoot '{mainBoardRoot.name}'.");
-            return;
+            Transform mainTile = generalmoving.Instance.GetMainTile(tile.name);
+            if (mainTile != null) tile = mainTile;
         }
 
-        // ---------- PICK PREFAB + TARGET WORLD SCALE ----------
+        // --- pick prefab ---
         GameObject prefab = null;
-        Vector3 targetWorldScale = Vector3.one;
         switch (pieceType)
         {
-            case "Queen": prefab = isWhite ? whiteQueenModel : blackQueenModel; targetWorldScale = queenScale; break;
-            case "Rook": prefab = isWhite ? whiteRookModel : blackRookModel; targetWorldScale = rookScale; break;
-            case "Bishop": prefab = isWhite ? whiteBishopModel : blackBishopModel; targetWorldScale = bishopScale; break;
-            case "Knight": prefab = isWhite ? whiteKnightModel : blackKnightModel; targetWorldScale = knightScale; break;
-            default: Debug.LogError("PromotionManager: Unknown pieceType " + pieceType); return;
+            case "Queen": prefab = isWhite ? whiteQueenModel : blackQueenModel; break;
+            case "Rook": prefab = isWhite ? whiteRookModel : blackRookModel; break;
+            case "Bishop": prefab = isWhite ? whiteBishopModel : blackBishopModel; break;
+            case "Knight": prefab = isWhite ? whiteKnightModel : blackKnightModel; break;
+            default:
+                Debug.LogError("PromotionManager: unknown pieceType " + pieceType);
+                return;
         }
-        if (!prefab) { Debug.LogError("PromotionManager: Prefab missing for " + pieceType); return; }
-
-        // Warn if the prefab smells like UI
-        if (!LooksLikeBoardMesh(prefab) || LooksLikeUIPrefab(prefab))
+        if (!prefab)
         {
-            Debug.LogWarning($"PromotionManager: The {pieceType} prefab might be a UI asset. HasMesh={LooksLikeBoardMesh(prefab)} HasUI={LooksLikeUIPrefab(prefab)}");
+            Debug.LogError("PromotionManager: missing prefab for " + pieceType);
+            return;
         }
+        Vector3 queenSize = new Vector3(0.25f, 0.25f, 0.25f);   
 
-        // remove pawn
+
+        // --- remember the pawn’s local transform on that tile ---
+        Vector3 pawnLocalPos = promotingPawn.transform.localPosition;
+        Quaternion pawnLocalRot = promotingPawn.transform.localRotation;
+        Vector3 pawnLocalScale = promotingPawn.transform.localScale;
+
+        // --- remove pawn ---
         Destroy(promotingPawn);
         promotingPawn = null;
 
-        // ---------- SCALE-NEUTRALIZER UNDER THE MAIN TILE ----------
-        Transform neutral = parentTile.Find("ScaleNeutralizer");
-        if (!neutral)
-        {
-            neutral = new GameObject("ScaleNeutralizer").transform;
-            neutral.SetParent(parentTile, false);
-            neutral.localPosition = Vector3.zero;
-            neutral.localRotation = Quaternion.identity;
+        // --- instantiate under the same tile, using the pawn’s local transform ---
+        GameObject newPiece = Instantiate(prefab, tile, false);
 
-            // counter the parent's lossy scale so children can use local = world
-            Vector3 pl = parentTile.lossyScale;
-            neutral.localScale = new Vector3(
-                1f / (Mathf.Approximately(pl.x, 0f) ? 1f : pl.x),
-                1f / (Mathf.Approximately(pl.y, 0f) ? 1f : pl.y),
-                1f / (Mathf.Approximately(pl.z, 0f) ? 1f : pl.z)
+        newPiece.transform.localPosition = pawnLocalPos;
+        newPiece.transform.localRotation = pawnLocalRot;
+        newPiece.transform.localScale = pawnLocalScale;
+
+        // if BLACK QUEEN, override scale/height
+        if (!isWhite && pieceType == "Queen")
+        {
+            newPiece.transform.localScale = blackQueenScale; //
+                                                             // place slightly above the tile center (world Y), in case the mesh needs lift
+            newPiece.transform.position = new Vector3(
+                tile.position.x,
+                tile.position.y + blackQueenYOffset,
+                tile.position.z
             );
         }
 
-        // ---------- INSTANTIATE + IMMEDIATE SAFE PARENT ----------
-        GameObject newPiece = Instantiate(prefab);
-        // Parent FIRST so nothing grabs it under UI
-        newPiece.transform.SetParent(neutral, false);
-        newPiece.transform.localPosition = new Vector3(0f, pieceYOffset, 0f);
-        newPiece.transform.localRotation = Quaternion.identity;
         newPiece.tag = pawnTag;
-
-        // If somehow it still landed under a Canvas, fix & strip UI bits
-        var inCanvas = newPiece.GetComponentInParent<Canvas>();
-        if (inCanvas)
-        {
-            Debug.LogWarning($"PromotionManager: {pieceType} was under Canvas '{inCanvas.name}'. Reparenting to board.");
-            newPiece.transform.SetParent(neutral, true);
-            var rt = newPiece.GetComponent<RectTransform>(); if (rt) Destroy(rt);
-            var cr = newPiece.GetComponent<CanvasRenderer>(); if (cr) Destroy(cr);
-        }
-
-        // optional: board-only layer
-        int boardLayer = LayerMask.NameToLayer("BoardPieces");
-        if (boardLayer >= 0)
-        {
-            SetLayerRecursively(newPiece, boardLayer);
-            parentTile.gameObject.layer = boardLayer;
-            neutral.gameObject.layer = boardLayer;
-        }
-
-        // ---------- SCALE THE VISUAL NODE ----------
-        Transform modelNamed = newPiece.transform.Find("Model") ?? newPiece.transform.Find("model");
-        Transform scaleTarget =
-            modelNamed ??
-            newPiece.GetComponentInChildren<SkinnedMeshRenderer>(true)?.transform ??
-            newPiece.GetComponentInChildren<MeshRenderer>(true)?.transform ??
-            newPiece.transform;
-
-        scaleTarget.localScale = targetWorldScale;
-        StartCoroutine(ReapplyScaleNextFrame(scaleTarget, targetWorldScale));
-
+        newPiece.name = pieceType;   // or $"White {pieceType}" / $"Black {pieceType}"
 
         promotionPanel?.SetActive(false);
+        generalmoving.Instance?.OnPromotionFinished(newPiece);
 
-        Debug.Log($"Promoted to {pieceType} on '{parentTile.name}' | path={GetFullPath(parentTile)} | localPos={newPiece.transform.localPosition} | worldPos={newPiece.transform.position} | worldScale={scaleTarget.lossyScale}");
+        Debug.Log($"[Promote] {pieceType} on {tile.name}, localPos={newPiece.transform.localPosition}, localScale={newPiece.transform.localScale}");
     }
 
-    // ---------- helpers ----------
+
+
+
+    // --------- helpers ---------
+
+    private float FindReferencePieceHeight(string tag)
+    {
+        // try to copy height from any existing board piece of the same side
+        var all = FindObjectsOfType<HoverChangeColor>(true);
+        foreach (var h in all)
+        {
+            if (h != null && h.CompareTag(tag))
+            {
+                var rr = h.GetComponentInChildren<Renderer>(true);
+                if (rr != null) return rr.bounds.size.y;
+            }
+        }
+        // sensible fallback if nothing is on the board yet
+        return 1.6f; // tweak to match your set (try 1.4–1.8)
+    }
+
+
+    private static float SafeInv(float v) => Mathf.Approximately(v, 0f) ? 1f : 1f / v;
+
+    /*private static bool IsTileName(string n)
+    {
+        if (string.IsNullOrEmpty(n)) return false;
+        // Expect something like "A1".."H8" (allow suffixes like " (Clone)")
+        char file = '\0';
+        int rank = -1;
+
+        // first letter A..H
+        for (int i = 0; i < n.Length; i++)
+        {
+            if (n[i] >= 'A' && n[i] <= 'H') { file = n[i]; break; }
+        }
+        if (file == '\0') return false;
+
+        // first digit sequence 1..8
+        for (int i = 0; i < n.Length; i++)
+        {
+            if (char.IsDigit(n[i]))
+            {
+                // parse one or two digits
+                int j = i;
+                while (j < n.Length && char.IsDigit(n[j])) j++;
+                int.TryParse(n.Substring(i, j - i), out rank);
+                break;
+            }
+        }
+        return rank >= 1 && rank <= 8;
+    }*/
+
+    private bool IsTileName(string n)
+    {
+        if (string.IsNullOrEmpty(n) || n.Length < 2) return false;
+        char f = n[0];
+        if (f < 'A' || f > 'H') return false;
+        return n.Any(char.IsDigit);   // there is some rank number in the name
+    }
+
+
     private static Transform FindDeepChildByName(Transform root, string name)
     {
         if (!root) return null;
         foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
             if (t.name == name) return t;
         return null;
-    }
-
-    private static string GetFullPath(Transform t)
-    {
-        var path = t.name;
-        var p = t.parent;
-        while (p != null) { path = p.name + "/" + path; p = p.parent; }
-        return path;
-    }
-
-    private System.Collections.IEnumerator ReapplyScaleNextFrame(Transform t, Vector3 desiredLocal)
-    {
-        yield return null;
-        if (t) t.localScale = desiredLocal;
-    }
-
-    private static bool LooksLikeUIPrefab(GameObject go)
-    {
-        return go.GetComponentInChildren<RectTransform>(true) != null
-            || go.GetComponentInChildren<CanvasRenderer>(true) != null
-            || go.GetComponentInChildren<Canvas>(true) != null;
-    }
-
-    private static bool LooksLikeBoardMesh(GameObject go)
-    {
-        return go.GetComponentInChildren<MeshRenderer>(true) != null
-            || go.GetComponentInChildren<SkinnedMeshRenderer>(true) != null;
     }
 
     private static void SetLayerRecursively(GameObject go, int layer)
